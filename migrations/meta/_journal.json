@@ -15,6 +15,20 @@
       "when": 1742523256362,
       "tag": "0001_wet_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742582743063,
+      "tag": "0002_sharp_lorna_dane",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1742583938422,
+      "tag": "0003_sturdy_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

@@ -40,3 +40,80 @@ export const workspaceInvite = pgTable('workspace_invite', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   usedAt: timestamp('used_at'),
 });
+
+export const WORKSPACE_ROLES = {
+  ADMIN: 'admin',
+  MEMBER: 'member',
+} as const;
+
+export const MEETING_ROLES = {
+  ORGANIZER: 'organizer',
+  EDITOR: 'editor',
+  COMMENTER: 'commenter',
+  VIEWER: 'viewer',
+} as const;
+
+export type WorkspaceRole =
+  (typeof WORKSPACE_ROLES)[keyof typeof WORKSPACE_ROLES];
+export type MeetingRole = (typeof MEETING_ROLES)[keyof typeof MEETING_ROLES];
+
+export const meeting = pgTable('meeting', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workspaceId: uuid('workspace_id')
+    .notNull()
+    .references(() => workspace.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  transcription: text('transcription'),
+  startTime: timestamp('start_time'),
+  endTime: timestamp('end_time'),
+  createdById: text('created_by_id')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// New table for meeting recordings
+export const meetingRecording = pgTable('meeting_recording', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  meetingId: uuid('meeting_id')
+    .notNull()
+    .references(() => meeting.id, { onDelete: 'cascade' }),
+  fileKey: text('file_key').notNull(),
+  recordingUrl: text('recording_url'),
+  recordingName: text('recording_name'),
+  duration: text('duration'),
+  createdById: text('created_by_id')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const meetingParticipant = pgTable('meeting_participant', {
+  meetingId: uuid('meeting_id')
+    .notNull()
+    .references(() => meeting.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  role: text('role').default(MEETING_ROLES.VIEWER).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const meetingOutcome = pgTable('meeting_outcome', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  meetingId: uuid('meeting_id')
+    .notNull()
+    .references(() => meeting.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  content: text('content').notNull(),
+  meta: text('meta'),
+  createdById: text('created_by_id')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

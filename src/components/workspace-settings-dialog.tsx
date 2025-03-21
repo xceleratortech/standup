@@ -9,9 +9,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Cog, UserCircle } from 'lucide-react';
+import { Cog } from 'lucide-react';
 import { type InferSelectModel } from 'drizzle-orm';
 import { workspace } from '@/lib/db/schema';
 import { Separator } from '@/components/ui/separator';
