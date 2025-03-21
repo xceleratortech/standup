@@ -98,11 +98,12 @@ async function InvitesData({ params }: { params: { id: string } }) {
   );
 }
 
-export default async function WorkspaceInvitesPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function WorkspaceInvitesPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });

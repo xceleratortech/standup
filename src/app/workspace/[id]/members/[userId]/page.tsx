@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import MemberActions from './member-actions';
 
-export default async function ManageMemberPage({
-  params,
-}: {
-  params: { id: string; userId: string };
-}) {
+export default async function ManageMemberPage(
+  props: {
+    params: Promise<{ id: string; userId: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });

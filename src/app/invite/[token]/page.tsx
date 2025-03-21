@@ -1,16 +1,13 @@
-import { acceptWorkspaceInvite } from '@/lib/actions/workspace-members';
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
 import { Authenticate } from '@/components/auth';
 import AcceptInviteButton from './accept-button';
+import Link from 'next/link';
 
-export default async function InvitePage({
-  params,
-}: {
-  params: { token: string };
+export default async function InvitePage(props: {
+  params: Promise<{ token: string }>;
 }) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -43,9 +40,12 @@ export default async function InvitePage({
         <AcceptInviteButton token={params.token} />
 
         <div className='mt-4'>
-          <Button variant='ghost' onClick={() => redirect('/')}>
+          <Link
+            href='/'
+            className='ring-offset-background focus-visible:ring-ring text-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50'
+          >
             Decline
-          </Button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { createWorkspaceInvite } from '@/lib/actions/workspace-members';
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export default function InviteMemberPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function InviteMemberPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = use(props.params);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('member');
   const [linkOnly, setLinkOnly] = useState(false);
