@@ -167,7 +167,7 @@ export async function getTranscriptionFromAudioFile(
       model: 'gemini-2.0-flash-lite',
       generationConfig: {
         responseMimeType: 'application/json',
-        // @ts-expect-error
+        // @ts-expect-error - Stream response handling requires specific type casting
         responseSchema: schema,
       },
     });

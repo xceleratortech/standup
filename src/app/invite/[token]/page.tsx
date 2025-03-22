@@ -31,7 +31,7 @@ export default async function InvitePage(props: { params: Promise<{ token: strin
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md rounded-lg border p-6 text-center">
         <h1 className="mb-2 text-2xl font-bold">Workspace Invitation</h1>
-        <p className="text-muted-foreground mb-6">You've been invited to join a workspace</p>
+        <p className="text-muted-foreground mb-6">You&apos;ve been invited to join a workspace</p>
 
         <AcceptInviteButton token={params.token} />
 

@@ -1,56 +1,95 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { SignUp } from '@/components/sign-up';
 import SignIn from './sign-in';
-import { SignUp } from './sign-up';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import { useResizeObserver } from '@/lib/use-resize-observer';
 
 export function Authenticate() {
-  const [selectedTab, setSelectedTab] = useState('login');
-  const [signInRef, signInRect] = useResizeObserver();
-  const [signUpRef, signUpRect] = useResizeObserver();
+  const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>('login');
+  const [transitioning, setTransitioning] = useState(false);
+
+  // Fix the ref type to be specific to HTMLDivElement
+  const signInRef = useRef<HTMLDivElement>(null);
+  const signUpRef = useRef<HTMLDivElement>(null);
+
+  // Rest of the component remains the same
+  const handleTabChange = (value: string) => {
+    setTransitioning(true);
+    setSelectedTab(value as 'login' | 'signup');
+    setTimeout(() => {
+      setTransitioning(false);
+    }, 300);
+  };
 
   return (
-    <Tabs defaultValue="login" className="w-full" onValueChange={(value) => setSelectedTab(value)}>
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="login">Login</TabsTrigger>
-        <TabsTrigger value="signup">Sign Up</TabsTrigger>
-      </TabsList>
+    <Card className="overflow-hidden">
+      <CardHeader>
+        <CardTitle>Authentication</CardTitle>
+        <CardDescription>Sign in or create an account to get started</CardDescription>
+      </CardHeader>
 
-      <motion.div
-        animate={{
-          height: selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
-        }}
-        transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
-        className="relative overflow-hidden"
-        style={{
-          height: selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
-        }}
+      <Tabs
+        defaultValue="login"
+        value={selectedTab}
+        onValueChange={handleTabChange}
+        className="w-full"
       >
-        <div
-          ref={signInRef}
-          className="absolute top-0 w-full"
-          style={{
-            opacity: selectedTab === 'login' ? 1 : 0,
-            visibility: selectedTab === 'login' ? 'visible' : 'hidden',
-          }}
-        >
-          <SignIn />
+        <div className="px-6">
+          <TabsList className="w-full">
+            <TabsTrigger value="login" className="flex-1">
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger value="signup" className="flex-1">
+              Sign Up
+            </TabsTrigger>
+          </TabsList>
         </div>
 
         <div
-          ref={signUpRef}
-          className="absolute top-0 w-full"
+          className="relative overflow-hidden"
           style={{
-            opacity: selectedTab === 'signup' ? 1 : 'hidden',
-            visibility: selectedTab === 'signup' ? 'visible' : 'hidden',
+            height:
+              selectedTab === 'login'
+                ? signInRef.current?.offsetHeight
+                : signUpRef.current?.offsetHeight,
           }}
         >
-          <SignUp />
+          <div
+            ref={signInRef}
+            className="absolute top-0 w-full"
+            style={{
+              opacity: selectedTab === 'login' ? 1 : 0,
+              transform: `translateX(${selectedTab === 'login' ? 0 : -20}px)`,
+              transition: 'opacity 0.3s, transform 0.3s',
+              pointerEvents: selectedTab === 'login' ? 'auto' : 'none',
+            }}
+          >
+            <SignIn />
+          </div>
+
+          <div
+            ref={signUpRef}
+            className="absolute top-0 w-full"
+            style={{
+              opacity: selectedTab === 'signup' ? 1 : 0,
+              transform: `translateX(${selectedTab === 'signup' ? 0 : 20}px)`,
+              transition: 'opacity 0.3s, transform 0.3s',
+              pointerEvents: selectedTab === 'signup' ? 'auto' : 'none',
+            }}
+          >
+            <SignUp />
+          </div>
         </div>
-      </motion.div>
-    </Tabs>
+      </Tabs>
+    </Card>
   );
 }

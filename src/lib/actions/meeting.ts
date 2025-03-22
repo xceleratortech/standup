@@ -186,7 +186,6 @@ export async function updateMeeting({
       description: description !== undefined ? description : meetingData.description,
       startTime: startTime || meetingData.startTime,
       endTime: endTime !== undefined ? endTime : meetingData.endTime,
-      transcription: transcription !== undefined ? transcription : meetingData.transcription,
       updatedAt: new Date(),
     })
     .where(eq(meeting.id, meetingId))

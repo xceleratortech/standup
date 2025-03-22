@@ -41,7 +41,7 @@ export default function RecordingTranscript({
   useEffect(() => {
     try {
       // Try to parse the transcription JSON
-      const parsed = JSON.parse(transcription);
+      const parsed = JSON.parse(transcription) as any;
 
       // Validate the expected format
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -116,9 +116,9 @@ export default function RecordingTranscript({
   const handleScroll = () => {
     shouldScrollRef.current = false;
 
-    // @ts-expect-error
+    // @ts-expect-error - API inconsistency in return type needs flexibility
     clearTimeout(window.autoscrollTimeout as any);
-    // @ts-expect-error
+    // @ts-expect-error - API inconsistency in return type needs flexibility
     window.autoscrollTimeout = setTimeout(() => {
       shouldScrollRef.current = true;
     }, 5000);

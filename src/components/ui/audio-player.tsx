@@ -121,7 +121,11 @@ export function AudioPlayer({
 
     if (isPlaying) {
       // Make sure no other audio is playing by accessing manager
-      sourceChangedRef.current ? waitForCanPlay(audio) : playAudio(audio);
+      if (sourceChangedRef.current) {
+        waitForCanPlay(audio);
+      } else {
+        playAudio(audio);
+      }
 
       // Start animation frame for smoother slider updates
       startSliderUpdates();
