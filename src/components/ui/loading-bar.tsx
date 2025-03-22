@@ -39,7 +39,7 @@ export function LoadingBar() {
   return (
     <div
       className={cn(
-        'fixed left-0 right-0 top-0 z-50 h-1 transform bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-in-out',
+        'fixed top-0 right-0 left-0 z-50 h-1 transform bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-in-out',
         loading ? 'opacity-100' : 'opacity-0'
       )}
       style={{

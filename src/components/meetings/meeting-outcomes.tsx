@@ -1,20 +1,8 @@
 'use client';
 
-import {
-  ListChecks,
-  Plus,
-  FileText,
-  CheckCircle,
-  Edit,
-  Trash2,
-} from 'lucide-react';
+import { ListChecks, Plus, FileText, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -42,24 +30,23 @@ export default function MeetingOutcomes({
   canEdit,
   initialOutcomes = [],
 }: MeetingOutcomesProps) {
-  const { data: outcomes = initialOutcomes, isLoading } =
-    useMeetingOutcomes(meetingId);
+  const { data: outcomes = initialOutcomes, isLoading } = useMeetingOutcomes(meetingId);
   const { mutate: deleteOutcome, isPending: isDeleting } = useDeleteOutcome();
 
   const getIconForType = (type: string) => {
     switch (type.toLowerCase()) {
       case 'summary':
-        return <FileText className='h-4 w-4' />;
+        return <FileText className="h-4 w-4" />;
       case 'action items':
-        return <CheckCircle className='h-4 w-4' />;
+        return <CheckCircle className="h-4 w-4" />;
       default:
-        return <ListChecks className='h-4 w-4' />;
+        return <ListChecks className="h-4 w-4" />;
     }
   };
 
   if (isLoading) {
     return (
-      <div className='flex justify-center py-8'>
+      <div className="flex justify-center py-8">
         <Spinner />
       </div>
     );
@@ -67,26 +54,25 @@ export default function MeetingOutcomes({
 
   if (outcomes.length === 0) {
     return (
-      <div className='space-y-2'>
-        <div className='flex items-center justify-between'>
-          <h2 className='flex items-center gap-2 text-xl font-semibold'>
-            <ListChecks className='h-5 w-5' />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <ListChecks className="h-5 w-5" />
             Outcomes
           </h2>
           {canEdit && (
-            <Button size='sm' className='gap-1'>
-              <Plus className='h-4 w-4' />
+            <Button size="sm" className="gap-1">
+              <Plus className="h-4 w-4" />
               Add Outcome
             </Button>
           )}
         </div>
 
-        <div className='text-muted-foreground rounded-lg border border-dashed p-6 text-center'>
+        <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center">
           <p>No outcomes have been added yet.</p>
           {canEdit && (
-            <p className='mt-2 text-sm'>
-              Add a summary or action items from this meeting to keep track of
-              important points.
+            <p className="mt-2 text-sm">
+              Add a summary or action items from this meeting to keep track of important points.
             </p>
           )}
         </div>
@@ -95,53 +81,53 @@ export default function MeetingOutcomes({
   }
 
   return (
-    <div className='space-y-4'>
-      <div className='flex items-center justify-between'>
-        <h2 className='flex items-center gap-2 text-xl font-semibold'>
-          <ListChecks className='h-5 w-5' />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <ListChecks className="h-5 w-5" />
           Outcomes
         </h2>
         {canEdit && (
-          <Button size='sm' className='gap-1'>
-            <Plus className='h-4 w-4' />
+          <Button size="sm" className="gap-1">
+            <Plus className="h-4 w-4" />
             Add Outcome
           </Button>
         )}
       </div>
 
-      <div className='grid gap-4 md:grid-cols-2'>
+      <div className="grid gap-4 md:grid-cols-2">
         {outcomes.map((outcome) => (
           <Card key={outcome.id}>
-            <CardHeader className='pb-2'>
-              <div className='flex items-start justify-between'>
-                <Badge variant='outline' className='flex items-center gap-1'>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between">
+                <Badge variant="outline" className="flex items-center gap-1">
                   {getIconForType(outcome.type)}
-                  <span className='capitalize'>{outcome.type}</span>
+                  <span className="capitalize">{outcome.type}</span>
                 </Badge>
 
                 {canEdit && (
-                  <div className='flex gap-1'>
-                    <Button variant='ghost' size='icon' className='h-8 w-8'>
-                      <Edit className='text-muted-foreground h-4 w-4' />
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Edit className="text-muted-foreground h-4 w-4" />
                     </Button>
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8'
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           disabled={isDeleting}
                         >
-                          <Trash2 className='text-muted-foreground hover:text-destructive h-4 w-4' />
+                          <Trash2 className="text-muted-foreground hover:text-destructive h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Outcome</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete this outcome? This
-                            action cannot be undone.
+                            Are you sure you want to delete this outcome? This action cannot be
+                            undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -162,9 +148,9 @@ export default function MeetingOutcomes({
               </div>
             </CardHeader>
             <CardContent>
-              <p className='whitespace-pre-line'>{outcome.content}</p>
+              <p className="whitespace-pre-line">{outcome.content}</p>
             </CardContent>
-            <CardFooter className='text-muted-foreground pt-2 text-xs'>
+            <CardFooter className="text-muted-foreground pt-2 text-xs">
               Added{' '}
               {formatDistanceToNow(new Date(outcome.createdAt), {
                 addSuffix: true,

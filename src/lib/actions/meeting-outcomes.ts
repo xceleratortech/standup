@@ -3,12 +3,7 @@
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import {
-  meeting,
-  meetingOutcome,
-  meetingParticipant,
-  workspaceUser,
-} from '@/lib/db/schema';
+import { meeting, meetingOutcome, meetingParticipant, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -57,10 +52,7 @@ export async function createMeetingOutcome({
 
   // Check if user can edit this meeting (admin, creator, or editor role)
   const participant = await db.query.meetingParticipant.findFirst({
-    where: and(
-      eq(meetingParticipant.meetingId, meetingId),
-      eq(meetingParticipant.userId, userId)
-    ),
+    where: and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)),
   });
 
   const canEdit =
@@ -70,9 +62,7 @@ export async function createMeetingOutcome({
     participant?.role === 'editor';
 
   if (!canEdit) {
-    throw new Error(
-      "You don't have permission to create outcomes for this meeting"
-    );
+    throw new Error("You don't have permission to create outcomes for this meeting");
   }
 
   // Create the outcome
@@ -87,9 +77,7 @@ export async function createMeetingOutcome({
     })
     .returning();
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
   return outcome;
 }
 
@@ -218,9 +206,7 @@ export async function updateMeetingOutcome({
     .where(eq(meetingOutcome.id, outcomeId))
     .returning();
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`);
   return updatedOutcome;
 }
 
@@ -282,8 +268,6 @@ export async function deleteMeetingOutcome(outcomeId: string) {
   // Delete the outcome
   await db.delete(meetingOutcome).where(eq(meetingOutcome.id, outcomeId));
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`);
   return { success: true };
 }

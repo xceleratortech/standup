@@ -31,8 +31,8 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
 
   if (!user) {
     return (
-      <Button asChild variant='ghost' size='sm'>
-        <Link href='/login'>Login</Link>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/login">Login</Link>
       </Button>
     );
   }
@@ -50,13 +50,13 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant='ghost' className='relative h-8 w-8 rounded-full p-0'>
-          <Avatar className='h-8 w-8'>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+          <Avatar className="h-8 w-8">
             {user.image && !imageError ? (
               <img
                 src={user.image}
                 alt={user.name || 'User avatar'}
-                className='h-full w-full object-cover'
+                className="h-full w-full object-cover"
                 onError={handleImageError}
               />
             ) : (
@@ -65,33 +65,31 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56' align='end' forceMount>
-        <DropdownMenuLabel className='font-normal'>
-          <div className='flex flex-col space-y-1'>
-            <p className='text-sm leading-none font-medium'>{user.name}</p>
-            <p className='text-muted-foreground text-xs leading-none'>
-              {user.email}
-            </p>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm leading-none font-medium">{user.name}</p>
+            <p className="text-muted-foreground text-xs leading-none">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href='/profile' className='flex items-center'>
-              <User className='mr-2 h-4 w-4' />
+            <Link href="/profile" className="flex items-center">
+              <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href='/settings' className='flex items-center'>
-              <Settings className='mr-2 h-4 w-4' />
+            <Link href="/settings" className="flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className='mr-2 h-4 w-4' />
+          <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

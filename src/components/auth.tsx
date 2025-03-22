@@ -13,31 +13,25 @@ export function Authenticate() {
   const [signUpRef, signUpRect] = useResizeObserver();
 
   return (
-    <Tabs
-      defaultValue='login'
-      className='w-full'
-      onValueChange={(value) => setSelectedTab(value)}
-    >
-      <TabsList className='grid w-full grid-cols-2'>
-        <TabsTrigger value='login'>Login</TabsTrigger>
-        <TabsTrigger value='signup'>Sign Up</TabsTrigger>
+    <Tabs defaultValue="login" className="w-full" onValueChange={(value) => setSelectedTab(value)}>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="login">Login</TabsTrigger>
+        <TabsTrigger value="signup">Sign Up</TabsTrigger>
       </TabsList>
 
       <motion.div
         animate={{
-          height:
-            selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
+          height: selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
         }}
         transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
-        className='relative overflow-hidden'
+        className="relative overflow-hidden"
         style={{
-          height:
-            selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
+          height: selectedTab === 'login' ? signInRect?.height : signUpRect?.height,
         }}
       >
         <div
           ref={signInRef}
-          className='absolute top-0 w-full'
+          className="absolute top-0 w-full"
           style={{
             opacity: selectedTab === 'login' ? 1 : 0,
             visibility: selectedTab === 'login' ? 'visible' : 'hidden',
@@ -48,7 +42,7 @@ export function Authenticate() {
 
         <div
           ref={signUpRef}
-          className='absolute top-0 w-full'
+          className="absolute top-0 w-full"
           style={{
             opacity: selectedTab === 'signup' ? 1 : 'hidden',
             visibility: selectedTab === 'signup' ? 'visible' : 'hidden',

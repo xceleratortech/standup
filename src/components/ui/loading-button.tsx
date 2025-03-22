@@ -2,17 +2,10 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/icons';
 
-interface LoadingButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   loadingText?: string;
-  variant?:
-    | 'default'
-    | 'destructive'
-    | 'outline'
-    | 'secondary'
-    | 'ghost'
-    | 'link';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   asChild?: boolean;
 }
@@ -37,7 +30,7 @@ export function LoadingButton({
     >
       {isLoading ? (
         <>
-          <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
           {loadingText || 'Loading...'}
         </>
       ) : (

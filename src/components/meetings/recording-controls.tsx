@@ -2,25 +2,10 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Mic,
-  Pause,
-  Square,
-  X,
-  ListPlus,
-  FileAudio,
-  Play,
-  Trash2,
-} from 'lucide-react';
+import { Mic, Pause, Square, X, ListPlus, FileAudio, Play, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import {
-  useWorkspaceMeetings,
-  useCreateMeeting,
-} from '@/lib/hooks/use-queries';
-import {
-  getRecordingUploadUrl,
-  addMeetingRecording,
-} from '@/lib/actions/meeting-recordings';
+import { useWorkspaceMeetings, useCreateMeeting } from '@/lib/hooks/use-queries';
+import { getRecordingUploadUrl, addMeetingRecording } from '@/lib/actions/meeting-recordings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,13 +29,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
-import {
-  useDraftRecordings,
-  DraftRecording,
-} from '@/contexts/draft-recordings-context';
+import { useDraftRecordings, DraftRecording } from '@/contexts/draft-recordings-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '../ui/badge';
 import { useQueryClient } from '@tanstack/react-query';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface RecordingControlsProps {
   workspaceId: string;
@@ -71,10 +54,10 @@ type Meeting = {
 // AudioVisualization Component
 function AudioVisualization({ audioLevel }: { audioLevel: number }) {
   return (
-    <div className='mb-4 flex w-full justify-center'>
-      <div className='h-4 w-full max-w-[240px]'>
+    <div className="mb-4 flex w-full justify-center">
+      <div className="h-4 w-full max-w-[240px]">
         <motion.div
-          className='h-1 rounded-full bg-red-500'
+          className="h-1 rounded-full bg-red-500"
           style={{
             scaleY: audioLevel * 4,
             originY: 1,
@@ -105,9 +88,9 @@ function RecordingTimer({
   };
 
   return (
-    <div className='mb-4 text-center'>
-      <p className='font-mono text-2xl font-medium'>{formatTime(seconds)}</p>
-      <p className='text-muted-foreground text-sm'>
+    <div className="mb-4 text-center">
+      <p className="font-mono text-2xl font-medium">{formatTime(seconds)}</p>
+      <p className="text-muted-foreground text-sm">
         {status === 'recording'
           ? 'Recording...'
           : status === 'paused'
@@ -136,32 +119,32 @@ function RecordButton({
     if (isPaused) {
       return (
         <Button
-          size='icon'
-          className='h-auto flex-1 rounded-xl bg-emerald-500 shadow-md hover:bg-emerald-600'
+          size="icon"
+          className="h-auto flex-1 rounded-xl bg-emerald-500 shadow-md hover:bg-emerald-600"
           onClick={onResume}
         >
-          <Mic className='h-7 w-7 text-white' />
+          <Mic className="h-7 w-7 text-white" />
         </Button>
       );
     } else {
       return (
         <Button
-          size='icon'
-          className='h-auto flex-1 rounded-xl bg-yellow-500 shadow-md hover:bg-yellow-600'
+          size="icon"
+          className="h-auto flex-1 rounded-xl bg-yellow-500 shadow-md hover:bg-yellow-600"
           onClick={onPause}
         >
-          <Pause className='h-7 w-7 text-white' />
+          <Pause className="h-7 w-7 text-white" />
         </Button>
       );
     }
   } else {
     return (
       <Button
-        size='icon'
-        className='h-auto flex-1 rounded-xl bg-red-500 shadow-md hover:bg-red-600'
+        size="icon"
+        className="h-auto flex-1 rounded-xl bg-red-500 shadow-md hover:bg-red-600"
         onClick={onStart}
       >
-        <Mic className='h-7 w-7 text-white' />
+        <Mic className="h-7 w-7 text-white" />
       </Button>
     );
   }
@@ -179,9 +162,9 @@ function UploadProgress({
 }) {
   if (isUploading) {
     return (
-      <div className='mt-4 w-full'>
-        <Progress value={progress} className='h-2' />
-        <p className='text-muted-foreground mt-2 text-center text-sm'>
+      <div className="mt-4 w-full">
+        <Progress value={progress} className="h-2" />
+        <p className="text-muted-foreground mt-2 text-center text-sm">
           Uploading recording... {progress}%
         </p>
       </div>
@@ -189,7 +172,7 @@ function UploadProgress({
   }
 
   if (error) {
-    return <p className='text-destructive mt-4 text-center text-sm'>{error}</p>;
+    return <p className="text-destructive mt-4 text-center text-sm">{error}</p>;
   }
 
   return null;
@@ -238,34 +221,33 @@ function SaveRecordingDialog({
         }
       }}
     >
-      <DialogContent className='sm:max-w-md'>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Save Recording</DialogTitle>
           <DialogDescription>
-            This recording has been saved as a draft. You can add it to a
-            meeting now or later.
+            This recording has been saved as a draft. You can add it to a meeting now or later.
           </DialogDescription>
         </DialogHeader>
-        <div className='grid gap-4 py-4'>
-          <div className='space-y-2'>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
             <Label>Recording Name</Label>
             <Input
               value={recordingName}
               onChange={(e) => setRecordingName(e.target.value)}
-              placeholder='Enter recording name'
+              placeholder="Enter recording name"
             />
           </div>
 
-          <div className='space-y-2'>
-            <div className='flex items-center justify-between'>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label>Select Meeting</Label>
               <Button
-                variant='ghost'
-                size='sm'
-                className='h-8 px-2 text-xs'
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs"
                 onClick={onShowNewMeetingDialog}
               >
-                <ListPlus className='mr-1 h-3 w-3' />
+                <ListPlus className="mr-1 h-3 w-3" />
                 New Meeting
               </Button>
             </div>
@@ -276,20 +258,16 @@ function SaveRecordingDialog({
             >
               <SelectTrigger>
                 <SelectValue
-                  placeholder={
-                    isFetchingMeetings
-                      ? 'Loading meetings...'
-                      : 'Select a meeting'
-                  }
+                  placeholder={isFetchingMeetings ? 'Loading meetings...' : 'Select a meeting'}
                 />
               </SelectTrigger>
               <SelectContent>
                 {isFetchingMeetings ? (
-                  <SelectItem value='loading' disabled>
+                  <SelectItem value="loading" disabled>
                     Loading meetings...
                   </SelectItem>
                 ) : meetings.length === 0 ? (
-                  <SelectItem value='none' disabled>
+                  <SelectItem value="none" disabled>
                     No meetings found
                   </SelectItem>
                 ) : (
@@ -303,7 +281,7 @@ function SaveRecordingDialog({
             </Select>
 
             {selectedMeeting && (
-              <p className='text-muted-foreground text-xs'>
+              <p className="text-muted-foreground text-xs">
                 Created{' '}
                 {formatDistanceToNow(new Date(selectedMeeting.createdAt), {
                   addSuffix: true,
@@ -312,18 +290,18 @@ function SaveRecordingDialog({
             )}
           </div>
 
-          <div className='flex items-center gap-2'>
-            <div className='bg-primary flex h-6 w-6 items-center justify-center rounded-full'>
-              <Square className='text-primary-foreground h-3 w-3' />
+          <div className="flex items-center gap-2">
+            <div className="bg-primary flex h-6 w-6 items-center justify-center rounded-full">
+              <Square className="text-primary-foreground h-3 w-3" />
             </div>
             <div>
-              <p className='text-sm font-medium'>{formatTime(recordingTime)}</p>
-              <p className='text-muted-foreground text-xs'>Recording length</p>
+              <p className="text-sm font-medium">{formatTime(recordingTime)}</p>
+              <p className="text-muted-foreground text-xs">Recording length</p>
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant='outline' onClick={onUseLater} disabled={isUploading}>
+          <Button variant="outline" onClick={onUseLater} disabled={isUploading}>
             Use Later
           </Button>
           <Button onClick={onSave} disabled={!selectedMeeting || isUploading}>
@@ -352,35 +330,26 @@ function DraftItem({
   formatTime: (seconds: number) => string;
 }) {
   return (
-    <div className='hover:bg-accent/50 group flex flex-col rounded-md border p-3 transition-colors'>
-      <div className='flex items-center gap-3'>
+    <div className="hover:bg-accent/50 group flex flex-col rounded-md border p-3 transition-colors">
+      <div className="flex items-center gap-3">
         <motion.div
           whileTap={{ scale: 0.9 }}
           className={`flex h-10 w-10 items-center justify-center rounded-full ${isPlaying ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-primary/10'} transition-colors`}
         >
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={onTogglePlay}
-            className='h-8 w-8 p-0'
-          >
-            {isPlaying ? (
-              <Pause className='h-4 w-4' />
-            ) : (
-              <Play className='h-4 w-4' />
-            )}
+          <Button variant="ghost" size="icon" onClick={onTogglePlay} className="h-8 w-8 p-0">
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
         </motion.div>
 
-        <div className='overflow-hidden'>
-          <p className='truncate font-medium' title={draft.name}>
+        <div className="overflow-hidden">
+          <p className="truncate font-medium" title={draft.name}>
             {draft.name}
           </p>
-          <div className='text-muted-foreground flex flex-wrap items-center gap-2 text-xs'>
-            <Badge variant='outline' className='px-1 py-0 text-xs font-normal'>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="px-1 py-0 text-xs font-normal">
               {formatTime(draft.duration)}
             </Badge>
-            <span className='xs:inline hidden'>•</span>
+            <span className="xs:inline hidden">•</span>
             <span>
               {formatDistanceToNow(new Date(draft.createdAt), {
                 addSuffix: true,
@@ -390,18 +359,18 @@ function DraftItem({
         </div>
       </div>
 
-      <div className='mt-3 grid grid-cols-2 gap-2'>
-        <Button variant='outline' size='sm' onClick={onAddToMeeting}>
-          <ListPlus className='mr-1 h-4 w-4' />
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button variant="outline" size="sm" onClick={onAddToMeeting}>
+          <ListPlus className="mr-1 h-4 w-4" />
           <span>Add to Meeting</span>
         </Button>
         <Button
-          variant='outline'
-          size='sm'
-          className='text-muted-foreground hover:text-destructive'
+          variant="outline"
+          size="sm"
+          className="text-muted-foreground hover:text-destructive"
           onClick={onDelete}
         >
-          <Trash2 className='mr-1 h-4 w-4' />
+          <Trash2 className="mr-1 h-4 w-4" />
           <span>Delete</span>
         </Button>
       </div>
@@ -422,9 +391,9 @@ export function RecordingControls({
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [recordingStatus, setRecordingStatus] = useState<
-    'recording' | 'paused' | 'complete'
-  >('recording');
+  const [recordingStatus, setRecordingStatus] = useState<'recording' | 'paused' | 'complete'>(
+    'recording'
+  );
   const [recordingName, setRecordingName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -441,21 +410,15 @@ export function RecordingControls({
   const [activeTab, setActiveTab] = useState('recorder');
   const [playing, setPlaying] = useState<string | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const [selectedDraft, setSelectedDraft] = useState<DraftRecording | null>(
-    null
-  );
+  const [selectedDraft, setSelectedDraft] = useState<DraftRecording | null>(null);
   const [isAddingToMeeting, setIsAddingToMeeting] = useState(false);
   const [draftRecordingName, setDraftRecordingName] = useState('');
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
-  const [recordingToDelete, setRecordingToDelete] = useState<string | null>(
-    null
-  );
-  const [showDraftDeleteConfirmDialog, setShowDraftDeleteConfirmDialog] =
-    useState(false);
+  const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
+  const [showDraftDeleteConfirmDialog, setShowDraftDeleteConfirmDialog] = useState(false);
   const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 
-  const { draftRecordings, addDraftRecording, deleteDraftRecording } =
-    useDraftRecordings();
+  const { draftRecordings, addDraftRecording, deleteDraftRecording } = useDraftRecordings();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -466,10 +429,9 @@ export function RecordingControls({
   const animationFrameRef = useRef<number | null>(null);
 
   // Use React Query to load meetings
-  const { data: fetchedMeetings = [], isLoading: isFetchingMeetings } =
-    useWorkspaceMeetings(
-      workspaceId && (showSavingDialog || isAddingToMeeting) ? workspaceId : ''
-    );
+  const { data: fetchedMeetings = [], isLoading: isFetchingMeetings } = useWorkspaceMeetings(
+    workspaceId && (showSavingDialog || isAddingToMeeting) ? workspaceId : ''
+  );
 
   // Create meeting mutation
   const { mutateAsync: createMeetingMutation } = useCreateMeeting();
@@ -549,9 +511,7 @@ export function RecordingControls({
     if (!audioAnalyserRef.current || !audioDataRef.current) return;
 
     audioAnalyserRef.current.getByteFrequencyData(audioDataRef.current);
-    const average =
-      audioDataRef.current.reduce((a, b) => a + b, 0) /
-      audioDataRef.current.length;
+    const average = audioDataRef.current.reduce((a, b) => a + b, 0) / audioDataRef.current.length;
     const normalizedValue = Math.min(average / 128, 1);
     setAudioLevel(normalizedValue);
 
@@ -579,8 +539,7 @@ export function RecordingControls({
       const mediaRecorder = new MediaRecorder(stream);
 
       // Set up audio analysis for visualization
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
@@ -616,11 +575,7 @@ export function RecordingControls({
   };
 
   const pauseRecording = () => {
-    if (
-      !mediaRecorderRef.current ||
-      mediaRecorderRef.current.state !== 'recording'
-    )
-      return;
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
 
     mediaRecorderRef.current.pause();
     setIsPaused(true);
@@ -636,11 +591,7 @@ export function RecordingControls({
   };
 
   const resumeRecording = () => {
-    if (
-      !mediaRecorderRef.current ||
-      mediaRecorderRef.current.state !== 'paused'
-    )
-      return;
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'paused') return;
 
     mediaRecorderRef.current.resume();
     setIsPaused(false);
@@ -664,7 +615,7 @@ export function RecordingControls({
 
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
-          type: 'audio/webm',
+          type: 'audio/mp3',
         });
 
         // Save blob for later use
@@ -683,11 +634,7 @@ export function RecordingControls({
         // Add to draft recordings automatically with duration in seconds
         if (addDraftRecording) {
           // Store both formatted duration and raw seconds
-          addDraftRecording(
-            audioBlob,
-            recordingTime,
-            formatTime(recordingTime)
-          );
+          addDraftRecording(audioBlob, recordingTime, formatTime(recordingTime));
           toast.success('Recording saved as draft');
         }
 
@@ -700,9 +647,7 @@ export function RecordingControls({
       mediaRecorderRef.current.stop();
 
       // Stop all tracks in the stream
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
     });
   };
 
@@ -714,9 +659,7 @@ export function RecordingControls({
       }
 
       // Stop the MediaRecorder without processing the recording
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       mediaRecorderRef.current = null;
     }
 
@@ -777,14 +720,14 @@ export function RecordingControls({
       // Get upload URL
       const { uploadUrl, fileKey } = await getRecordingUploadUrl({
         meetingId: selectedMeetingId,
-        fileName: `recording-${Date.now()}.webm`,
-        contentType: 'audio/webm',
+        fileName: `recording-${Date.now()}.mp3`,
+        contentType: 'audio/mp3',
       });
 
       // Upload the recording
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', uploadUrl, true);
-      xhr.setRequestHeader('Content-Type', 'audio/webm');
+      xhr.setRequestHeader('Content-Type', 'audio/mp3');
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -803,6 +746,7 @@ export function RecordingControls({
               recordingName: recordingName,
               duration: formatTime(recordingTime),
               durationSeconds: recordingTime.toString(), // Add the raw seconds value
+              addCurrentUserAsParticipant: true, // Add flag to ensure current user is added as participant
             });
 
             // Invalidate the recordings query to refresh the list
@@ -830,9 +774,7 @@ export function RecordingControls({
             setRecordingName('');
 
             // Navigate to the meeting page
-            router.push(
-              `/workspace/${workspaceId}/meeting/${selectedMeetingId}`
-            );
+            router.push(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
             router.refresh();
           } catch (error) {
             console.error('Error saving recording:', error);
@@ -890,7 +832,7 @@ export function RecordingControls({
       toast.loading('Adding recording to meeting...');
 
       // Generate a filename
-      const filename = `recording-${Date.now()}.webm`;
+      const filename = `recording-${Date.now()}.mp3`;
 
       // Get a signed upload URL
       const { uploadUrl, fileKey } = await getRecordingUploadUrl({
@@ -913,9 +855,9 @@ export function RecordingControls({
         meetingId: selectedMeetingId,
         fileKey,
         recordingName: draftRecordingName,
-        duration:
-          selectedDraft.formattedDuration || formatTime(selectedDraft.duration),
+        duration: selectedDraft.formattedDuration || formatTime(selectedDraft.duration),
         durationSeconds: selectedDraft.duration.toString(),
+        addCurrentUserAsParticipant: true, // Add flag to ensure current user is added as participant
       });
 
       // Invalidate the recordings query to refresh the list
@@ -996,42 +938,34 @@ export function RecordingControls({
       />
 
       {/* Create New Meeting Dialog */}
-      <Dialog
-        open={showMeetingCreateDialog}
-        onOpenChange={setShowMeetingCreateDialog}
-      >
+      <Dialog open={showMeetingCreateDialog} onOpenChange={setShowMeetingCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Meeting</DialogTitle>
           </DialogHeader>
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='meeting-title'>Meeting Title</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="meeting-title">Meeting Title</Label>
               <Input
-                id='meeting-title'
+                id="meeting-title"
                 value={newMeetingTitle}
                 onChange={(e) => setNewMeetingTitle(e.target.value)}
-                placeholder='Enter meeting title'
+                placeholder="Enter meeting title"
               />
             </div>
-            <div className='space-y-2'>
-              <Label htmlFor='meeting-description'>
-                Description (Optional)
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="meeting-description">Description (Optional)</Label>
               <Textarea
-                id='meeting-description'
+                id="meeting-description"
                 value={newMeetingDescription}
                 onChange={(e) => setNewMeetingDescription(e.target.value)}
-                placeholder='Enter meeting description'
+                placeholder="Enter meeting description"
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowMeetingCreateDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowMeetingCreateDialog(false)}>
               Cancel
             </Button>
             <Button onClick={createNewMeeting}>Create Meeting</Button>
@@ -1044,35 +978,33 @@ export function RecordingControls({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Recording to Meeting</DialogTitle>
-            <DialogDescription>
-              Choose a meeting to add this recording to.
-            </DialogDescription>
+            <DialogDescription>Choose a meeting to add this recording to.</DialogDescription>
           </DialogHeader>
 
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='recording-name'>Recording Name</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="recording-name">Recording Name</Label>
               <Input
-                id='recording-name'
+                id="recording-name"
                 value={draftRecordingName}
                 onChange={(e) => setDraftRecordingName(e.target.value)}
-                placeholder='Enter a name for this recording'
+                placeholder="Enter a name for this recording"
               />
             </div>
 
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <Label>Select Meeting</Label>
                 <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-8 px-2 text-xs'
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
                   onClick={() => {
                     setIsAddingToMeeting(false);
                     setShowMeetingCreateDialog(true);
                   }}
                 >
-                  <ListPlus className='mr-1 h-3 w-3' />
+                  <ListPlus className="mr-1 h-3 w-3" />
                   New Meeting
                 </Button>
               </div>
@@ -1083,20 +1015,16 @@ export function RecordingControls({
               >
                 <SelectTrigger>
                   <SelectValue
-                    placeholder={
-                      isFetchingMeetings
-                        ? 'Loading meetings...'
-                        : 'Select a meeting'
-                    }
+                    placeholder={isFetchingMeetings ? 'Loading meetings...' : 'Select a meeting'}
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {isFetchingMeetings ? (
-                    <SelectItem value='loading' disabled>
+                    <SelectItem value="loading" disabled>
                       Loading meetings...
                     </SelectItem>
                   ) : existingMeetings.length === 0 ? (
-                    <SelectItem value='none' disabled>
+                    <SelectItem value="none" disabled>
                       No meetings found
                     </SelectItem>
                   ) : (
@@ -1112,10 +1040,7 @@ export function RecordingControls({
           </div>
 
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsAddingToMeeting(false)}
-            >
+            <Button variant="outline" onClick={() => setIsAddingToMeeting(false)}>
               Cancel
             </Button>
             <Button
@@ -1129,33 +1054,29 @@ export function RecordingControls({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={showDeleteConfirmDialog}
-        onOpenChange={setShowDeleteConfirmDialog}
-      >
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Draft Recording?</DialogTitle>
             <DialogDescription>
-              Your recording has been successfully added to the meeting. Would
-              you like to delete the draft version?
+              Your recording has been successfully added to the meeting. Would you like to delete
+              the draft version?
             </DialogDescription>
           </DialogHeader>
 
-          <div className='py-4'>
-            <div className='mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'>
-              <p className='text-sm'>
-                <strong>Note:</strong> Keeping the draft will allow you to add
-                this recording to other meetings in the future. Draft recordings
-                are stored locally in your browser and will be lost if you clear
-                your browser data.
+          <div className="py-4">
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="text-sm">
+                <strong>Note:</strong> Keeping the draft will allow you to add this recording to
+                other meetings in the future. Draft recordings are stored locally in your browser
+                and will be lost if you clear your browser data.
               </p>
             </div>
           </div>
 
           <DialogFooter>
             <Button
-              variant='outline'
+              variant="outline"
               onClick={() => {
                 setShowDeleteConfirmDialog(false);
                 setRecordingToDelete(null);
@@ -1164,7 +1085,7 @@ export function RecordingControls({
               Keep Draft
             </Button>
             <Button
-              variant='default'
+              variant="default"
               onClick={() => {
                 if (recordingToDelete) {
                   deleteDraftRecording(recordingToDelete);
@@ -1181,22 +1102,18 @@ export function RecordingControls({
       </Dialog>
 
       {/* Draft Delete Confirmation Dialog */}
-      <Dialog
-        open={showDraftDeleteConfirmDialog}
-        onOpenChange={setShowDraftDeleteConfirmDialog}
-      >
+      <Dialog open={showDraftDeleteConfirmDialog} onOpenChange={setShowDraftDeleteConfirmDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Draft Recording?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this draft recording? This action
-              cannot be undone.
+              Are you sure you want to delete this draft recording? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter>
             <Button
-              variant='outline'
+              variant="outline"
               onClick={() => {
                 setShowDraftDeleteConfirmDialog(false);
                 setDraftToDelete(null);
@@ -1204,37 +1121,37 @@ export function RecordingControls({
             >
               Cancel
             </Button>
-            <Button variant='destructive' onClick={confirmDraftDeletion}>
+            <Button variant="destructive" onClick={confirmDraftDeletion}>
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Card className='w-full gap-2 overflow-hidden p-4'>
+      <Card className="w-full gap-2 overflow-hidden p-4">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <div className='text-sm font-medium'>
+          <div className="text-sm font-medium">
             {activeTab === 'recorder' ? 'Audio Recorder' : 'Draft Recordings'}
           </div>
         </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className='w-full'>
-            <TabsTrigger value='recorder' className='flex-1'>
-              <Mic className='mr-2 h-4 w-4' />
+          <TabsList className="w-full">
+            <TabsTrigger value="recorder" className="flex-1">
+              <Mic className="mr-2 h-4 w-4" />
               Recorder
             </TabsTrigger>
-            <TabsTrigger value='drafts' className='flex-1'>
-              <FileAudio className='mr-2 h-4 w-4' />
+            <TabsTrigger value="drafts" className="flex-1">
+              <FileAudio className="mr-2 h-4 w-4" />
               Drafts
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value='recorder'>
+          <TabsContent value="recorder">
             {/* Audio Visualization */}
             {isRecording && <AudioVisualization audioLevel={audioLevel} />}
 
@@ -1242,22 +1159,20 @@ export function RecordingControls({
             {(isRecording || recordingTime > 0) && (
               <RecordingTimer
                 seconds={recordingTime}
-                status={
-                  isRecording ? (isPaused ? 'paused' : 'recording') : 'complete'
-                }
+                status={isRecording ? (isPaused ? 'paused' : 'recording') : 'complete'}
               />
             )}
 
             {/* Controls */}
-            <div className='flex h-20 gap-4'>
+            <div className="flex h-20 gap-4">
               {isRecording && (
                 <Button
-                  size='icon'
-                  variant='outline'
-                  className='h-auto flex-1 rounded-xl border-2 shadow-sm'
+                  size="icon"
+                  variant="outline"
+                  className="h-auto flex-1 rounded-xl border-2 shadow-sm"
                   onClick={cancelRecording}
                 >
-                  <X className='h-5 w-5' />
+                  <X className="h-5 w-5" />
                 </Button>
               )}
 
@@ -1271,12 +1186,12 @@ export function RecordingControls({
 
               {isRecording && (
                 <Button
-                  size='icon'
-                  variant='outline'
-                  className='h-auto flex-1 rounded-xl border-2 shadow-sm'
+                  size="icon"
+                  variant="outline"
+                  className="h-auto flex-1 rounded-xl border-2 shadow-sm"
                   onClick={stopRecording}
                 >
-                  <Square className='h-5 w-5' />
+                  <Square className="h-5 w-5" />
                 </Button>
               )}
             </div>
@@ -1289,27 +1204,23 @@ export function RecordingControls({
             />
           </TabsContent>
 
-          <TabsContent value='drafts'>
+          <TabsContent value="drafts">
             {draftRecordings.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className='flex flex-col items-center justify-center py-10 text-center'
+                className="flex flex-col items-center justify-center py-10 text-center"
               >
-                <div className='bg-muted/30 mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
-                  <FileAudio className='text-muted-foreground h-8 w-8' />
+                <div className="bg-muted/30 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <FileAudio className="text-muted-foreground h-8 w-8" />
                 </div>
-                <h3 className='font-medium'>No draft recordings</h3>
-                <p className='text-muted-foreground mt-1 max-w-xs text-sm'>
+                <h3 className="font-medium">No draft recordings</h3>
+                <p className="text-muted-foreground mt-1 max-w-xs text-sm">
                   Recordings you create will be saved as drafts automatically
                 </p>
-                <Button
-                  variant='outline'
-                  className='mt-4'
-                  onClick={() => setActiveTab('recorder')}
-                >
-                  <Mic className='mr-2 h-4 w-4' />
+                <Button variant="outline" className="mt-4" onClick={() => setActiveTab('recorder')}>
+                  <Mic className="mr-2 h-4 w-4" />
                   Start Recording
                 </Button>
               </motion.div>
@@ -1318,52 +1229,61 @@ export function RecordingControls({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className='space-y-3'
+                className="space-y-3"
               >
-                <div className='bg-muted/50 text-muted-foreground mb-2 rounded-md p-3 text-xs'>
+                <div className="bg-muted/50 text-muted-foreground mb-2 rounded-md p-3 text-xs">
                   <p>
-                    <strong>Note:</strong> Draft recordings are stored locally
-                    in your browser. Clearing your browser data or using another
-                    device will mean you cannot access these recordings.
+                    <strong>Note:</strong> Draft recordings are stored locally in your browser.
+                    Clearing your browser data or using another device will mean you cannot access
+                    these recordings.
                   </p>
                 </div>
 
-                {draftRecordings.map((draft, index) => (
-                  <motion.div
-                    key={draft.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.3,
-                      delay: index * 0.05,
-                      ease: 'easeOut',
-                    }}
-                    className='relative overflow-hidden'
-                  >
-                    <DraftItem
-                      draft={draft}
-                      isPlaying={playing === draft.id}
-                      onTogglePlay={() => togglePlay(draft.id)}
-                      onAddToMeeting={() => {
-                        setSelectedDraft(draft);
-                        setDraftRecordingName(draft.name);
-                        setIsAddingToMeeting(true);
-                      }}
-                      onDelete={() => handleDraftDelete(draft.id)}
-                      formatTime={formatTime}
-                    />
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="space-y-3">
+                    {/* Sort the draft recordings by creation time, newest first */}
+                    {[...draftRecordings]
+                      .sort(
+                        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                      )
+                      .map((draft, index) => (
+                        <motion.div
+                          key={draft.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: index * 0.05,
+                            ease: 'easeOut',
+                          }}
+                          className="relative overflow-hidden"
+                        >
+                          <DraftItem
+                            draft={draft}
+                            isPlaying={playing === draft.id}
+                            onTogglePlay={() => togglePlay(draft.id)}
+                            onAddToMeeting={() => {
+                              setSelectedDraft(draft);
+                              setDraftRecordingName(draft.name);
+                              setIsAddingToMeeting(true);
+                            }}
+                            onDelete={() => handleDraftDelete(draft.id)}
+                            formatTime={formatTime}
+                          />
 
-                    {playing === draft.id && (
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        exit={{ scaleX: 0 }}
-                        transition={{ duration: audio?.duration || 30 }}
-                        className='bg-primary absolute bottom-0 left-0 h-[2px] w-full origin-left'
-                      />
-                    )}
-                  </motion.div>
-                ))}
+                          {playing === draft.id && (
+                            <motion.div
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1 }}
+                              exit={{ scaleX: 0 }}
+                              transition={{ duration: audio?.duration || 30 }}
+                              className="bg-primary absolute bottom-0 left-0 h-[2px] w-full origin-left"
+                            />
+                          )}
+                        </motion.div>
+                      ))}
+                  </div>
+                </ScrollArea>
               </motion.div>
             )}
           </TabsContent>

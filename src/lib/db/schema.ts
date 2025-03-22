@@ -53,8 +53,7 @@ export const MEETING_ROLES = {
   VIEWER: 'viewer',
 } as const;
 
-export type WorkspaceRole =
-  (typeof WORKSPACE_ROLES)[keyof typeof WORKSPACE_ROLES];
+export type WorkspaceRole = (typeof WORKSPACE_ROLES)[keyof typeof WORKSPACE_ROLES];
 export type MeetingRole = (typeof MEETING_ROLES)[keyof typeof MEETING_ROLES];
 
 export const meeting = pgTable('meeting', {
@@ -64,7 +63,6 @@ export const meeting = pgTable('meeting', {
     .references(() => workspace.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  transcription: text('transcription'),
   startTime: timestamp('start_time'),
   endTime: timestamp('end_time'),
   createdById: text('created_by_id')
@@ -90,6 +88,7 @@ export const meetingRecording = pgTable('meeting_recording', {
     .references(() => user.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  transcription: text('transcription'),
 });
 
 export const meetingParticipant = pgTable('meeting_participant', {
@@ -115,6 +114,23 @@ export const meetingOutcome = pgTable('meeting_outcome', {
   createdById: text('created_by_id')
     .notNull()
     .references(() => user.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Table for user voice identity samples per workspace
+export const userVoiceIdentity = pgTable('user_voice_identity', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workspaceId: uuid('workspace_id')
+    .notNull()
+    .references(() => workspace.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  fileKey: text('file_key').notNull(),
+  sampleUrl: text('sample_url'),
+  duration: text('duration'),
+  durationSeconds: text('duration_seconds'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

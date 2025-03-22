@@ -37,24 +37,22 @@ export default function CreateWorkspacePage() {
   };
 
   return (
-    <div className='flex min-h-screen items-center justify-center p-4'>
-      <Card className='w-full max-w-md'>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create New Workspace</CardTitle>
-          <CardDescription>
-            Create your first workspace to get started
-          </CardDescription>
+          <CardDescription>Create your first workspace to get started</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent>
-            <div className='space-y-4'>
-              <div className='space-y-2'>
-                <label htmlFor='name' className='text-sm font-medium'>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">
                   Workspace Name
                 </label>
                 <Input
-                  id='name'
-                  placeholder='My Awesome Team'
+                  id="name"
+                  placeholder="My Awesome Team"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -62,18 +60,16 @@ export default function CreateWorkspacePage() {
                 />
               </div>
               {error && (
-                <div className='rounded-md bg-red-50 p-3 text-sm text-red-500'>
-                  {error}
-                </div>
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500">{error}</div>
               )}
             </div>
           </CardContent>
           <CardFooter>
             <LoadingButton
-              type='submit'
-              className='w-full'
+              type="submit"
+              className="w-full"
               isLoading={isLoading}
-              loadingText='Creating...'
+              loadingText="Creating..."
             >
               Create Workspace
             </LoadingButton>

@@ -1,4 +1,4 @@
-import { getWorkspace, getUserWorkspaces } from '@/lib/actions/workspace';
+import { getWorkspace, getUserWorkspaces, getUserVoiceIdentity } from '@/lib/actions/workspace';
 import { getWorkspaceMembers } from '@/lib/actions/workspace-members';
 import { WorkspaceSelector } from '@/components/workspace-selector';
 import WorkspaceSettingsDialog from './workspace-settings-dialog';
@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import UserProfileMenu from './user-profile-menu';
 import Link from 'next/link';
 import { ChevronRight, CassetteTape } from 'lucide-react';
+import VoiceIdentityDialog from './voice-identity-dialog';
 
 interface BreadcrumbItem {
   label: string;
@@ -27,6 +28,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  const voiceIdentity = await getUserVoiceIdentity({ workspaceId });
 
   // Ensure workspace has all required non-optional properties
   const workspace = {
@@ -38,36 +40,36 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
     creatorId: workspaceData.creatorId || '',
   };
 
-  // Prepare simplified data for client components
-  const simplifiedWorkspaces = userWorkspaces.map((ws) => ({
+  // Sort workspaces by creation date (newest first)
+  const sortedWorkspaces = [...userWorkspaces].sort((a, b) => {
+    return new Date(b.workspace.createdAt).getTime() - new Date(a.workspace.createdAt).getTime();
+  });
+
+  // Prepare simplified data for client components including creator information
+  const simplifiedWorkspaces = sortedWorkspaces.map((ws) => ({
     id: ws.workspace.id,
     name: ws.workspace.name,
+    createdAt: ws.workspace.createdAt,
+    creator: ws.workspace.creator?.name || 'Unknown',
   }));
 
   return (
-    <div className='flex items-center justify-between'>
-      <div className='container flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
-          <Link href='/' className='mr-2 flex items-center gap-2'>
-            <CassetteTape className='h-6 w-6 text-blue-500' />
-            <span className='hidden text-lg font-semibold sm:inline-block'>
-              Standup
-            </span>
+    <div className="flex items-center justify-between">
+      <div className="container flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="mr-2 flex items-center gap-2">
+            <CassetteTape className="h-6 w-6 text-blue-500" />
+            <span className="hidden text-lg font-semibold sm:inline-block">Standup</span>
           </Link>
 
-          <WorkspaceSelector
-            currentWorkspaceId={workspaceId}
-            workspaces={simplifiedWorkspaces}
-          />
+          <WorkspaceSelector currentWorkspaceId={workspaceId} workspaces={simplifiedWorkspaces} />
 
           {breadcrumbs && breadcrumbs.length > 0 && (
-            <nav className='flex' aria-label='Breadcrumb'>
-              <ol className='flex items-center space-x-1'>
+            <nav className="flex" aria-label="Breadcrumb">
+              <ol className="flex items-center space-x-1">
                 {breadcrumbs.map((item, index) => (
-                  <li key={item.href} className='flex items-center'>
-                    {index > 0 && (
-                      <ChevronRight className='text-muted-foreground mx-1 h-4 w-4' />
-                    )}
+                  <li key={item.href} className="flex items-center">
+                    {index > 0 && <ChevronRight className="text-muted-foreground mx-1 h-4 w-4" />}
                     <Link
                       href={item.href}
                       aria-current={item.current ? 'page' : undefined}
@@ -81,9 +83,38 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
             </nav>
           )}
 
-          <WorkspaceSettingsDialog workspace={workspace} members={members} />
+          <WorkspaceSettingsDialog
+            workspace={workspace}
+            members={members}
+            currentUserId={session?.user?.id || ''}
+          />
         </div>
-        <UserProfileMenu user={session?.user} />
+
+        <div className="flex items-center gap-2">
+          <VoiceIdentityDialog
+            workspaceId={workspaceId}
+            hasVoiceIdentity={!!voiceIdentity}
+            voiceIdentity={voiceIdentity}
+            currentUser={
+              session?.user
+                ? {
+                    ...session.user,
+                    image: session.user.image || null,
+                  }
+                : undefined
+            }
+          />
+          <UserProfileMenu
+            user={
+              session?.user
+                ? {
+                    ...session.user,
+                    image: session.user.image || null,
+                  }
+                : undefined
+            }
+          />
+        </div>
       </div>
     </div>
   );

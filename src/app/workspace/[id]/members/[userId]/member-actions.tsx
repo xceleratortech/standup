@@ -2,10 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  updateMemberRole,
-  removeMember,
-} from '@/lib/actions/workspace-members';
+import { updateMemberRole, removeMember } from '@/lib/actions/workspace-members';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -49,11 +46,7 @@ export default function MemberActions({
   };
 
   const handleRemoveMember = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to remove this member from the workspace?`
-      )
-    ) {
+    if (!confirm(`Are you sure you want to remove this member from the workspace?`)) {
       return;
     }
 
@@ -72,36 +65,36 @@ export default function MemberActions({
   };
 
   return (
-    <div className='space-y-6'>
-      <div className='space-y-4'>
-        <h3 className='text-sm font-medium'>Change Role</h3>
-        <div className='flex gap-2'>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium">Change Role</h3>
+        <div className="flex gap-2">
           <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className='w-[180px]'>
-              <SelectValue placeholder='Select a role' />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select a role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='admin'>Admin</SelectItem>
-              <SelectItem value='member'>Member</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
             </SelectContent>
           </Select>
           <LoadingButton
             onClick={handleRoleUpdate}
             isLoading={isUpdating}
-            loadingText='Updating...'
+            loadingText="Updating..."
           >
             Update Role
           </LoadingButton>
         </div>
       </div>
 
-      <div className='border-t pt-4'>
-        <h3 className='mb-4 text-sm font-medium'>Remove Member</h3>
+      <div className="border-t pt-4">
+        <h3 className="mb-4 text-sm font-medium">Remove Member</h3>
         <LoadingButton
-          variant='destructive'
+          variant="destructive"
           onClick={handleRemoveMember}
           isLoading={isRemoving}
-          loadingText='Removing...'
+          loadingText="Removing..."
         >
           Remove from Workspace
         </LoadingButton>

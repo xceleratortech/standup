@@ -11,8 +11,8 @@ export default async function Home() {
 
   if (!session)
     return (
-      <div className='flex h-screen items-center justify-center'>
-        <main className='w-full max-w-md space-y-8 p-6'>
+      <div className="flex h-screen items-center justify-center">
+        <main className="w-full max-w-md space-y-8 p-6">
           <Authenticate />
         </main>
       </div>

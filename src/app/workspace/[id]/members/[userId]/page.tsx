@@ -7,11 +7,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import MemberActions from './member-actions';
 
-export default async function ManageMemberPage(
-  props: {
-    params: Promise<{ id: string; userId: string }>;
-  }
-) {
+export default async function ManageMemberPage(props: {
+  params: Promise<{ id: string; userId: string }>;
+}) {
   const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -38,33 +36,27 @@ export default async function ManageMemberPage(
     }
 
     return (
-      <div className='container mx-auto p-6'>
-        <div className='mb-8 flex items-center justify-between'>
+      <div className="container mx-auto p-6">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className='text-2xl font-bold'>Manage Team Member</h1>
-            <p className='text-muted-foreground'>{workspace.name}</p>
+            <h1 className="text-2xl font-bold">Manage Team Member</h1>
+            <p className="text-muted-foreground">{workspace.name}</p>
           </div>
-          <Button asChild variant='outline'>
+          <Button asChild variant="outline">
             <Link href={`/workspace/${params.id}`}>Back to Workspace</Link>
           </Button>
         </div>
 
-        <div className='mx-auto max-w-2xl rounded-lg border p-6'>
-          <div className='mb-6'>
-            <h2 className='text-xl font-semibold'>
-              {member.name || 'Unnamed User'}
-            </h2>
-            <p className='text-muted-foreground'>{member.email}</p>
-            <p className='text-muted-foreground mt-1 text-sm'>
-              Current role: <span className='capitalize'>{member.role}</span>
+        <div className="mx-auto max-w-2xl rounded-lg border p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold">{member.name || 'Unnamed User'}</h2>
+            <p className="text-muted-foreground">{member.email}</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Current role: <span className="capitalize">{member.role}</span>
             </p>
           </div>
 
-          <MemberActions
-            workspaceId={params.id}
-            userId={params.userId}
-            currentRole={member.role}
-          />
+          <MemberActions workspaceId={params.id} userId={params.userId} currentRole={member.role} />
         </div>
       </div>
     );

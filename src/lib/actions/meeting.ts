@@ -33,10 +33,7 @@ export async function createMeeting({
 
   // Check if user has access to this workspace
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace) {
@@ -110,10 +107,7 @@ export async function getWorkspaceMeetings(workspaceId: string) {
 
   // Check if user has access to this workspace
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace) {
@@ -178,8 +172,7 @@ export async function updateMeeting({
   }
 
   // Check if user can edit this meeting (admin or creator or editor)
-  const canEdit =
-    userWorkspace.role === 'admin' || meetingData.createdById === userId;
+  const canEdit = userWorkspace.role === 'admin' || meetingData.createdById === userId;
 
   if (!canEdit) {
     throw new Error("You don't have permission to edit this meeting");
@@ -190,20 +183,16 @@ export async function updateMeeting({
     .update(meeting)
     .set({
       title: title !== undefined ? title : meetingData.title,
-      description:
-        description !== undefined ? description : meetingData.description,
+      description: description !== undefined ? description : meetingData.description,
       startTime: startTime || meetingData.startTime,
       endTime: endTime !== undefined ? endTime : meetingData.endTime,
-      transcription:
-        transcription !== undefined ? transcription : meetingData.transcription,
+      transcription: transcription !== undefined ? transcription : meetingData.transcription,
       updatedAt: new Date(),
     })
     .where(eq(meeting.id, meetingId))
     .returning();
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
   return updatedMeeting;
 }
 
@@ -236,10 +225,7 @@ export async function deleteMeeting(meetingId: string) {
     ),
   });
 
-  if (
-    !userWorkspace ||
-    (userWorkspace.role !== 'admin' && meetingData.createdById !== userId)
-  ) {
+  if (!userWorkspace || (userWorkspace.role !== 'admin' && meetingData.createdById !== userId)) {
     throw new Error("You don't have permission to delete this meeting");
   }
 

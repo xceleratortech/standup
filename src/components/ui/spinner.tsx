@@ -13,9 +13,5 @@ export function Spinner({ className, size = 'md' }: SpinnerProps) {
     lg: 'h-8 w-8',
   };
 
-  return (
-    <Icons.spinner
-      className={cn('animate-spin', sizeClasses[size], className)}
-    />
-  );
+  return <Icons.spinner className={cn('animate-spin', sizeClasses[size], className)} />;
 }

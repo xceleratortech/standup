@@ -1,23 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Trash2, PlusCircle, FileAudio, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  addMeetingRecording,
-  getRecordingUploadUrl,
-} from '@/lib/actions/meeting-recordings';
+import { addMeetingRecording, getRecordingUploadUrl } from '@/lib/actions/meeting-recordings';
 import {
   Dialog,
   DialogContent,
@@ -34,10 +25,7 @@ interface DraftRecordingsProps {
   canEdit: boolean;
 }
 
-export default function DraftRecordings({
-  meetingId,
-  canEdit,
-}: DraftRecordingsProps) {
+export default function DraftRecordings({ meetingId, canEdit }: DraftRecordingsProps) {
   const { draftRecordings, deleteDraftRecording } = useDraftRecordings();
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState<string | null>(null);
@@ -115,7 +103,7 @@ export default function DraftRecordings({
       toast.loading('Adding recording to meeting...');
 
       // Generate a filename
-      const filename = `recording-${Date.now()}.webm`;
+      const filename = `recording-${Date.now()}.mp3`;
 
       // Get a signed upload URL
       const { uploadUrl, fileKey } = await getRecordingUploadUrl({
@@ -177,9 +165,9 @@ export default function DraftRecordings({
           <CardDescription>Loading your unsaved recordings...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className='space-y-2'>
-            <Skeleton className='h-12 w-full' />
-            <Skeleton className='h-12 w-full' />
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -194,38 +182,32 @@ export default function DraftRecordings({
     <>
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <FileAudio className='h-5 w-5' />
+          <CardTitle className="flex items-center gap-2">
+            <FileAudio className="h-5 w-5" />
             Draft Recordings
           </CardTitle>
-          <CardDescription>
-            Unsaved recordings you can add to this meeting
-          </CardDescription>
+          <CardDescription>Unsaved recordings you can add to this meeting</CardDescription>
         </CardHeader>
 
         <CardContent>
-          <div className='space-y-3'>
+          <div className="space-y-3">
             {draftRecordings.map((draft) => (
               <div
                 key={draft.id}
-                className='hover:bg-accent/50 flex items-center justify-between rounded-md border p-2'
+                className="hover:bg-accent/50 flex items-center justify-between rounded-md border p-2"
               >
-                <div className='flex items-center gap-2'>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    onClick={() => togglePlay(draft.id)}
-                  >
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => togglePlay(draft.id)}>
                     {playing === draft.id ? (
-                      <Pause className='h-4 w-4' />
+                      <Pause className="h-4 w-4" />
                     ) : (
-                      <Play className='h-4 w-4' />
+                      <Play className="h-4 w-4" />
                     )}
                   </Button>
 
                   <div>
-                    <p className='font-medium'>{draft.name}</p>
-                    <div className='text-muted-foreground flex items-center gap-2 text-sm'>
+                    <p className="font-medium">{draft.name}</p>
+                    <div className="text-muted-foreground flex items-center gap-2 text-sm">
                       <span>{formatDuration(draft.duration)}</span>
                       <span>•</span>
                       <span>
@@ -237,21 +219,13 @@ export default function DraftRecordings({
                   </div>
                 </div>
 
-                <div className='flex items-center gap-2'>
-                  <Button
-                    variant='secondary'
-                    size='sm'
-                    onClick={() => prepareAddToMeeting(draft)}
-                  >
-                    <PlusCircle className='mr-1 h-4 w-4' />
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => prepareAddToMeeting(draft)}>
+                    <PlusCircle className="mr-1 h-4 w-4" />
                     Add to Meeting
                   </Button>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    onClick={() => deleteDraft(draft.id)}
-                  >
-                    <Trash2 className='text-destructive h-4 w-4' />
+                  <Button variant="ghost" size="icon" onClick={() => deleteDraft(draft.id)}>
+                    <Trash2 className="text-destructive h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -270,21 +244,18 @@ export default function DraftRecordings({
             </DialogDescription>
           </DialogHeader>
 
-          <div className='py-4'>
-            <Label htmlFor='recording-name'>Recording Name</Label>
+          <div className="py-4">
+            <Label htmlFor="recording-name">Recording Name</Label>
             <Input
-              id='recording-name'
+              id="recording-name"
               value={recordingName}
               onChange={(e) => setRecordingName(e.target.value)}
-              placeholder='Enter a name for this recording'
+              placeholder="Enter a name for this recording"
             />
           </div>
 
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsAddingToMeeting(false)}
-            >
+            <Button variant="outline" onClick={() => setIsAddingToMeeting(false)}>
               Cancel
             </Button>
             <Button onClick={addToMeeting}>Add to Meeting</Button>

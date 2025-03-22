@@ -33,11 +33,11 @@ export default function DeleteInviteButton({
 
   return (
     <LoadingButton
-      size='sm'
-      variant='destructive'
+      size="sm"
+      variant="destructive"
       onClick={handleDelete}
       isLoading={isLoading}
-      loadingText='Deleting...'
+      loadingText="Deleting..."
     >
       Delete
     </LoadingButton>

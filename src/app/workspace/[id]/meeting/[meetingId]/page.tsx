@@ -23,20 +23,16 @@ import MeetingParticipants from '@/components/meetings/meeting-participants';
 
 function LoadingMeeting() {
   return (
-    <div className='flex h-48 w-full items-center justify-center'>
-      <div className='flex flex-col items-center'>
-        <Spinner size='lg' className='text-blue-500' />
-        <p className='text-muted-foreground mt-4 text-sm'>Loading meeting...</p>
+    <div className="flex h-48 w-full items-center justify-center">
+      <div className="flex flex-col items-center">
+        <Spinner size="lg" className="text-blue-500" />
+        <p className="text-muted-foreground mt-4 text-sm">Loading meeting...</p>
       </div>
     </div>
   );
 }
 
-function MeetingContent({
-  params,
-}: {
-  params: { id: string; meetingId: string };
-}) {
+function MeetingContent({ params }: { params: { id: string; meetingId: string } }) {
   return (
     <Suspense fallback={<LoadingMeeting />}>
       <MeetingData params={params} />
@@ -44,11 +40,7 @@ function MeetingContent({
   );
 }
 
-async function MeetingData({
-  params,
-}: {
-  params: { id: string; meetingId: string };
-}) {
+async function MeetingData({ params }: { params: { id: string; meetingId: string } }) {
   const meeting = await getMeeting(params.meetingId);
   const participants = await getMeetingParticipants(params.meetingId);
   const outcomes = await getMeetingOutcomes(params.meetingId);
@@ -61,10 +53,7 @@ async function MeetingData({
 
   // Check if user can edit this meeting
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, params.id),
-      eq(workspaceUser.userId, userId!)
-    ),
+    where: and(eq(workspaceUser.workspaceId, params.id), eq(workspaceUser.userId, userId!)),
   });
 
   const isAdmin = userWorkspace?.role === 'admin';
@@ -82,25 +71,23 @@ async function MeetingData({
       : 'Unknown duration';
 
   return (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       {/* Meeting Header */}
       <div>
-        <div className='flex flex-col justify-between gap-2 sm:flex-row sm:items-center'>
+        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div>
-            <h1 className='text-2xl font-medium tracking-tight'>
-              {meeting.title}
-            </h1>
-            <div className='text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm'>
-              <Calendar className='h-4 w-4' />
+            <h1 className="text-2xl font-medium tracking-tight">{meeting.title}</h1>
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4" />
               <span>{startTimeFormatted}</span>
               {meeting.startTime && meeting.endTime && (
                 <>
-                  <span className='px-1'>•</span>
-                  <Clock className='h-4 w-4' />
+                  <span className="px-1">•</span>
+                  <Clock className="h-4 w-4" />
                   <span>{durationFormatted}</span>
                 </>
               )}
-              <span className='px-1'>•</span>
+              <span className="px-1">•</span>
               <span>
                 Created{' '}
                 {formatDistanceToNow(new Date(meeting.createdAt), {
@@ -111,31 +98,22 @@ async function MeetingData({
           </div>
 
           {canEdit && (
-            <Button variant='outline' size='sm' className='shrink-0 gap-2'>
-              <Edit className='h-4 w-4' />
+            <Button variant="outline" size="sm" className="shrink-0 gap-2">
+              <Edit className="h-4 w-4" />
               Edit
             </Button>
           )}
         </div>
 
         {meeting.description && (
-          <p className='text-muted-foreground mt-4 text-sm'>
-            {meeting.description}
-          </p>
+          <p className="text-muted-foreground mt-4 text-sm">{meeting.description}</p>
         )}
       </div>
 
-      <div className='grid grid-cols-1 gap-6 lg:grid-cols-3'>
-        <div className='space-y-8 lg:col-span-2'>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
           {/* Recordings Section */}
           <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
-
-          {/* Transcription Section */}
-          {meeting.transcription && (
-            <div className='rounded-lg border p-4'>
-              <MeetingTranscription transcription={meeting.transcription} />
-            </div>
-          )}
 
           {/* Outcomes Section */}
           <MeetingOutcomes
@@ -146,9 +124,9 @@ async function MeetingData({
         </div>
 
         {/* Sidebar */}
-        <div className='space-y-6'>
+        <div className="space-y-6">
           {/* Recording Controls */}
-          <div className='overflow-hidden rounded-lg'>
+          <div className="overflow-hidden rounded-lg">
             <RecordingControls
               defaultSelectedMeetingId={params.meetingId}
               workspaceId={params.id}
@@ -219,8 +197,8 @@ export default async function MeetingPage(props: {
     ];
 
     return (
-      <div className='container mx-auto pb-20'>
-        <div className='my-2'>
+      <div className="container mx-auto pb-20">
+        <div className="my-2">
           <WorkspaceNav workspaceId={params.id} breadcrumbs={breadcrumbs} />
         </div>
         <MeetingContent params={params} />

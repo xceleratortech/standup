@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface DraftRecording {
   id: string;
@@ -30,9 +24,7 @@ interface DraftRecordingsContextType {
   getDraftRecordingById: (id: string) => DraftRecording | undefined;
 }
 
-const DraftRecordingsContext = createContext<
-  DraftRecordingsContextType | undefined
->(undefined);
+const DraftRecordingsContext = createContext<DraftRecordingsContextType | undefined>(undefined);
 
 export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
   const [draftRecordings, setDraftRecordings] = useState<DraftRecording[]>([]);
@@ -50,7 +42,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
             const processedDrafts = allDrafts.map((draft: any) => ({
               ...draft,
               blob: new Blob([new Uint8Array(draft.blobData)], {
-                type: draft.blobType || 'audio/webm',
+                type: draft.blobType || 'audio/mp3',
               }),
             }));
             setDraftRecordings(processedDrafts);
@@ -74,7 +66,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
               const processedDrafts = allDrafts.map((draft: any) => ({
                 ...draft,
                 blob: new Blob([new Uint8Array(draft.blobData)], {
-                  type: draft.blobType || 'audio/webm',
+                  type: draft.blobType || 'audio/mp3',
                 }),
               }));
               setDraftRecordings(processedDrafts);
@@ -98,21 +90,14 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
       (window as any).addDraftRecording = addDraftRecording;
     }
     return () => {
-      if (
-        typeof window !== 'undefined' &&
-        'addDraftRecording' in (window as any)
-      ) {
+      if (typeof window !== 'undefined' && 'addDraftRecording' in (window as any)) {
         delete (window as any).addDraftRecording;
       }
     };
   }, [draftRecordings]);
 
   // Add a new recording to drafts
-  const addDraftRecording = (
-    blob: Blob,
-    durationSeconds: number,
-    formattedDuration?: string
-  ) => {
+  const addDraftRecording = (blob: Blob, durationSeconds: number, formattedDuration?: string) => {
     try {
       const newDraft: DraftRecording = {
         id: crypto.randomUUID(),
@@ -131,9 +116,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
       const fileReader = new FileReader();
       fileReader.readAsArrayBuffer(blob);
       fileReader.onload = () => {
-        const blobData = Array.from(
-          new Uint8Array(fileReader.result as ArrayBuffer)
-        );
+        const blobData = Array.from(new Uint8Array(fileReader.result as ArrayBuffer));
 
         // Store all drafts with the blob data
         const draftsForStorage = updatedDrafts.map((draft) => ({
@@ -148,10 +131,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
           blobType: blob.type,
         }));
 
-        localStorage.setItem(
-          'draftRecordings',
-          JSON.stringify(draftsForStorage)
-        );
+        localStorage.setItem('draftRecordings', JSON.stringify(draftsForStorage));
       };
 
       return newDraft.id;
@@ -183,10 +163,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        localStorage.setItem(
-          'draftRecordings',
-          JSON.stringify(draftsForStorage)
-        );
+        localStorage.setItem('draftRecordings', JSON.stringify(draftsForStorage));
       }
     } catch (error) {
       console.error('Failed to delete draft recording:', error);
@@ -215,9 +192,7 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
 export function useDraftRecordings() {
   const context = useContext(DraftRecordingsContext);
   if (context === undefined) {
-    throw new Error(
-      'useDraftRecordings must be used within a DraftRecordingsProvider'
-    );
+    throw new Error('useDraftRecordings must be used within a DraftRecordingsProvider');
   }
   return context;
 }

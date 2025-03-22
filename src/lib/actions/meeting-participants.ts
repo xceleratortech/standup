@@ -3,12 +3,7 @@
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import {
-  meeting,
-  meetingParticipant,
-  workspaceUser,
-  MEETING_ROLES,
-} from '@/lib/db/schema';
+import { meeting, meetingParticipant, workspaceUser, MEETING_ROLES } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { user } from '@/lib/db/auth-schema';
@@ -52,8 +47,7 @@ export async function addMeetingParticipant({
 
   if (
     !userWorkspace ||
-    (userWorkspace.role !== 'admin' &&
-      meetingData.createdById !== currentUserId)
+    (userWorkspace.role !== 'admin' && meetingData.createdById !== currentUserId)
   ) {
     throw new Error("You don't have permission to add participants");
   }
@@ -72,10 +66,7 @@ export async function addMeetingParticipant({
 
   // Check if user is already a participant
   const existingParticipant = await db.query.meetingParticipant.findFirst({
-    where: and(
-      eq(meetingParticipant.meetingId, meetingId),
-      eq(meetingParticipant.userId, userId)
-    ),
+    where: and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)),
   });
 
   if (existingParticipant) {
@@ -89,9 +80,7 @@ export async function addMeetingParticipant({
     role,
   });
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
   return { success: true };
 }
 
@@ -183,8 +172,7 @@ export async function updateParticipantRole({
 
   if (
     !userWorkspace ||
-    (userWorkspace.role !== 'admin' &&
-      meetingData.createdById !== currentUserId)
+    (userWorkspace.role !== 'admin' && meetingData.createdById !== currentUserId)
   ) {
     throw new Error("You don't have permission to update roles");
   }
@@ -196,16 +184,9 @@ export async function updateParticipantRole({
       role: newRole,
       updatedAt: new Date(),
     })
-    .where(
-      and(
-        eq(meetingParticipant.meetingId, meetingId),
-        eq(meetingParticipant.userId, userId)
-      )
-    );
+    .where(and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)));
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
   return { success: true };
 }
 
@@ -245,8 +226,7 @@ export async function removeParticipant({
   });
 
   const isAdminOrCreator =
-    userWorkspace?.role === 'admin' ||
-    meetingData.createdById === currentUserId;
+    userWorkspace?.role === 'admin' || meetingData.createdById === currentUserId;
 
   if (!userWorkspace || (!isAdminOrCreator && currentUserId !== userId)) {
     throw new Error("You don't have permission to remove participants");
@@ -255,15 +235,8 @@ export async function removeParticipant({
   // Remove the participant
   await db
     .delete(meetingParticipant)
-    .where(
-      and(
-        eq(meetingParticipant.meetingId, meetingId),
-        eq(meetingParticipant.userId, userId)
-      )
-    );
+    .where(and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)));
 
-  revalidatePath(
-    `/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`
-  );
+  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
   return { success: true };
 }

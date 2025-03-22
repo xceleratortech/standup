@@ -22,11 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export default function InviteMemberPage(
-  props: {
-    params: Promise<{ id: string }>;
-  }
-) {
+export default function InviteMemberPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('member');
@@ -62,39 +58,37 @@ export default function InviteMemberPage(
   };
 
   return (
-    <div className='container mx-auto p-6'>
-      <Card className='mx-auto max-w-md'>
+    <div className="container mx-auto p-6">
+      <Card className="mx-auto max-w-md">
         <CardHeader>
           <CardTitle>Invite Team Members</CardTitle>
-          <CardDescription>
-            Invite people to join your workspace
-          </CardDescription>
+          <CardDescription>Invite people to join your workspace</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent>
-            <div className='space-y-4'>
-              <div className='flex items-center space-x-2'>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
                 <input
-                  type='checkbox'
-                  id='linkOnly'
+                  type="checkbox"
+                  id="linkOnly"
                   checked={linkOnly}
                   onChange={(e) => setLinkOnly(e.target.checked)}
-                  className='h-4 w-4 rounded border-gray-300'
+                  className="h-4 w-4 rounded border-gray-300"
                 />
-                <label htmlFor='linkOnly' className='text-sm'>
+                <label htmlFor="linkOnly" className="text-sm">
                   Generate invite link only (no email)
                 </label>
               </div>
 
               {!linkOnly && (
-                <div className='space-y-2'>
-                  <label htmlFor='email' className='text-sm font-medium'>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
                     Email Address
                   </label>
                   <Input
-                    id='email'
-                    type='email'
-                    placeholder='colleague@example.com'
+                    id="email"
+                    type="email"
+                    placeholder="colleague@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required={!linkOnly}
@@ -102,32 +96,30 @@ export default function InviteMemberPage(
                 </div>
               )}
 
-              <div className='space-y-2'>
-                <label htmlFor='role' className='text-sm font-medium'>
+              <div className="space-y-2">
+                <label htmlFor="role" className="text-sm font-medium">
                   Role
                 </label>
                 <Select value={role} onValueChange={(value) => setRole(value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder='Select a role' />
+                    <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='member'>Member</SelectItem>
-                    <SelectItem value='admin'>Admin</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {inviteLink && (
-                <div className='rounded-md bg-blue-50 p-3'>
-                  <p className='text-sm font-medium text-blue-800'>
-                    Invite link generated:
-                  </p>
-                  <div className='mt-2 flex'>
-                    <Input value={inviteLink} readOnly className='text-xs' />
+                <div className="rounded-md bg-blue-50 p-3">
+                  <p className="text-sm font-medium text-blue-800">Invite link generated:</p>
+                  <div className="mt-2 flex">
+                    <Input value={inviteLink} readOnly className="text-xs" />
                     <Button
-                      type='button'
-                      variant='outline'
-                      className='ml-2'
+                      type="button"
+                      variant="outline"
+                      className="ml-2"
                       onClick={() => {
                         navigator.clipboard.writeText(inviteLink);
                       }}
@@ -139,23 +131,21 @@ export default function InviteMemberPage(
               )}
 
               {error && (
-                <div className='rounded-md bg-red-50 p-3 text-sm text-red-500'>
-                  {error}
-                </div>
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-500">{error}</div>
               )}
             </div>
           </CardContent>
-          <CardFooter className='flex justify-between'>
+          <CardFooter className="flex justify-between">
             <Button
-              type='button'
-              variant='outline'
+              type="button"
+              variant="outline"
               onClick={() => router.push(`/workspace/${params.id}`)}
               disabled={isLoading}
             >
               Cancel
             </Button>
             <LoadingButton
-              type='submit'
+              type="submit"
               isLoading={isLoading}
               loadingText={linkOnly ? 'Generating...' : 'Sending...'}
             >

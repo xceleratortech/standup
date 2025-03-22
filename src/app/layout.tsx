@@ -27,15 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en'>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <NextTopLoader color='#2563eb' height={2} />
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <NextTopLoader color="#2563eb" height={2} />
         <Providers>
           <DraftRecordingsProvider>
             {children}
-            <Toaster position='top-right' />
+            <Toaster position="top-right" />
           </DraftRecordingsProvider>
         </Providers>
       </body>

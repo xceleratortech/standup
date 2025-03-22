@@ -14,10 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  useMeetingParticipants,
-  useRemoveParticipant,
-} from '@/lib/hooks/use-queries';
+import { useMeetingParticipants, useRemoveParticipant } from '@/lib/hooks/use-queries';
 import { Spinner } from '@/components/ui/spinner';
 import { AddParticipantDialog } from './add-participant-dialog';
 import { useQueryClient } from '@tanstack/react-query';
@@ -45,10 +42,8 @@ export default function MeetingParticipants({
   initialParticipants = [],
 }: MeetingParticipantsProps) {
   const queryClient = useQueryClient();
-  const { data: participants = initialParticipants, isLoading } =
-    useMeetingParticipants(meetingId);
-  const { mutate: removeParticipant, isPending: isRemoving } =
-    useRemoveParticipant();
+  const { data: participants = initialParticipants, isLoading } = useMeetingParticipants(meetingId);
+  const { mutate: removeParticipant, isPending: isRemoving } = useRemoveParticipant();
 
   const refreshParticipants = () => {
     queryClient.invalidateQueries({ queryKey: ['participants', meetingId] });
@@ -69,11 +64,11 @@ export default function MeetingParticipants({
 
   if (isLoading) {
     return (
-      <div className='space-y-4 rounded-lg border p-4'>
-        <div className='flex items-center justify-between'>
-          <h3 className='font-medium'>Participants</h3>
+      <div className="space-y-4 rounded-lg border p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium">Participants</h3>
         </div>
-        <div className='flex justify-center py-4'>
+        <div className="flex justify-center py-4">
           <Spinner />
         </div>
       </div>
@@ -81,9 +76,9 @@ export default function MeetingParticipants({
   }
 
   return (
-    <div className='space-y-4 rounded-lg border p-4'>
-      <div className='flex items-center justify-between'>
-        <h3 className='font-medium'>Participants ({participants.length})</h3>
+    <div className="space-y-4 rounded-lg border p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Participants ({participants.length})</h3>
         {canEdit && (
           <AddParticipantDialog
             meetingId={meetingId}
@@ -94,55 +89,46 @@ export default function MeetingParticipants({
         )}
       </div>
 
-      <div className='space-y-3'>
+      <div className="space-y-3">
         {participants.length === 0 ? (
-          <div className='text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm'>
+          <div className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
             No participants found
           </div>
         ) : (
           participants.map((participant) => (
-            <div
-              key={participant.userId}
-              className='flex items-center justify-between'
-            >
-              <div className='flex items-center gap-2'>
-                <Avatar className='h-8 w-8'>
+            <div key={participant.userId} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
                   <AvatarImage src={participant.image || undefined} />
                   <AvatarFallback>
                     {participant.name?.[0] || participant.email?.[0] || '?'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className='text-sm font-medium'>
-                    {participant.name || participant.email || 'Unknown User'}
-                  </p>
-                  <Badge
-                    variant={getRoleBadgeVariant(participant.role)}
-                    className='mt-1 text-xs'
-                  >
-                    {participant.role}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-medium">{participant.name || 'Unknown User'}</p>
+                    <Badge variant={getRoleBadgeVariant(participant.role)} className="mt-1 text-xs">
+                      {participant.role}
+                    </Badge>
+                  </div>
+                  {participant.email && (
+                    <p className="text-muted-foreground text-xs">{participant.email}</p>
+                  )}
                 </div>
               </div>
 
               {canEdit && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='h-8 w-8'
-                      disabled={isRemoving}
-                    >
-                      <Trash2 className='text-muted-foreground hover:text-destructive h-4 w-4' />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isRemoving}>
+                      <Trash2 className="text-muted-foreground hover:text-destructive h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Remove Participant</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to remove this participant from
-                        the meeting?
+                        Are you sure you want to remove this participant from the meeting?
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

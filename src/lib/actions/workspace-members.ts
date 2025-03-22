@@ -24,10 +24,7 @@ export async function getWorkspaceMembers(workspaceId: string) {
 
   // Check if user has access to this workspace
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace) {
@@ -73,10 +70,7 @@ export async function updateMemberRole({
 
   // Check if current user is admin
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, currentUserId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, currentUserId)),
   });
 
   if (!userWorkspace || userWorkspace.role !== 'admin') {
@@ -90,12 +84,7 @@ export async function updateMemberRole({
       role: newRole,
       updatedAt: new Date(),
     })
-    .where(
-      and(
-        eq(workspaceUser.workspaceId, workspaceId),
-        eq(workspaceUser.userId, userId)
-      )
-    );
+    .where(and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)));
 
   revalidatePath(`/workspaces/${workspaceId}/members`);
   return { success: true };
@@ -121,28 +110,17 @@ export async function removeMember({
 
   // Check if current user is admin or the member being removed
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, currentUserId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, currentUserId)),
   });
 
-  if (
-    !userWorkspace ||
-    (userWorkspace.role !== 'admin' && currentUserId !== userId)
-  ) {
+  if (!userWorkspace || (userWorkspace.role !== 'admin' && currentUserId !== userId)) {
     throw new Error('Unauthorized to remove members');
   }
 
   // Remove the member
   await db
     .delete(workspaceUser)
-    .where(
-      and(
-        eq(workspaceUser.workspaceId, workspaceId),
-        eq(workspaceUser.userId, userId)
-      )
-    );
+    .where(and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)));
 
   revalidatePath(`/workspaces/${workspaceId}/members`);
   return { success: true };
@@ -172,10 +150,7 @@ export async function createWorkspaceInvite({
 
   // Check if user is admin
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace || userWorkspace.role !== 'admin') {
@@ -257,10 +232,7 @@ export async function acceptWorkspaceInvite(token: string) {
 
   // Check if user is already a member
   const existingMember = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, invite.workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, invite.workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (existingMember) {
@@ -300,10 +272,7 @@ export async function getWorkspaceInvites(workspaceId: string) {
 
   // Check if user is admin
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace || userWorkspace.role !== 'admin') {
@@ -314,12 +283,7 @@ export async function getWorkspaceInvites(workspaceId: string) {
   const invites = await db
     .select()
     .from(workspaceInvite)
-    .where(
-      and(
-        eq(workspaceInvite.workspaceId, workspaceId),
-        isNull(workspaceInvite.usedAt)
-      )
-    );
+    .where(and(eq(workspaceInvite.workspaceId, workspaceId), isNull(workspaceInvite.usedAt)));
 
   return invites.map((invite) => ({
     ...invite,
@@ -350,10 +314,7 @@ export async function deleteWorkspaceInvite(inviteId: string) {
 
   // Check if user is admin in this workspace
   const userWorkspace = await db.query.workspaceUser.findFirst({
-    where: and(
-      eq(workspaceUser.workspaceId, invite.workspaceId),
-      eq(workspaceUser.userId, userId)
-    ),
+    where: and(eq(workspaceUser.workspaceId, invite.workspaceId), eq(workspaceUser.userId, userId)),
   });
 
   if (!userWorkspace || userWorkspace.role !== 'admin') {

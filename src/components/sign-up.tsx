@@ -42,21 +42,21 @@ export function SignUp() {
   };
 
   return (
-    <Card className='max-w-md rounded-t-none'>
+    <Card className="max-w-md rounded-t-none">
       <CardHeader>
-        <CardTitle className='text-lg md:text-xl'>Sign Up</CardTitle>
-        <CardDescription className='text-xs md:text-sm'>
+        <CardTitle className="text-lg md:text-xl">Sign Up</CardTitle>
+        <CardDescription className="text-xs md:text-sm">
           Enter your information to create an account
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className='grid gap-4'>
-          <div className='grid grid-cols-2 gap-4'>
-            <div className='grid gap-2'>
-              <Label htmlFor='first-name'>First name</Label>
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="first-name">First name</Label>
               <Input
-                id='first-name'
-                placeholder='Max'
+                id="first-name"
+                placeholder="Max"
                 required
                 onChange={(e) => {
                   setFirstName(e.target.value);
@@ -64,11 +64,11 @@ export function SignUp() {
                 value={firstName}
               />
             </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='last-name'>Last name</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="last-name">Last name</Label>
               <Input
-                id='last-name'
-                placeholder='Robinson'
+                id="last-name"
+                placeholder="Robinson"
                 required
                 onChange={(e) => {
                   setLastName(e.target.value);
@@ -77,12 +77,12 @@ export function SignUp() {
               />
             </div>
           </div>
-          <div className='grid gap-2'>
-            <Label htmlFor='email'>Email</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
             <Input
-              id='email'
-              type='email'
-              placeholder='m@example.com'
+              id="email"
+              type="email"
+              placeholder="m@example.com"
               required
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -90,52 +90,47 @@ export function SignUp() {
               value={email}
             />
           </div>
-          <div className='grid gap-2'>
-            <Label htmlFor='password'>Password</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
             <Input
-              id='password'
-              type='password'
+              id="password"
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete='new-password'
-              placeholder='Password'
+              autoComplete="new-password"
+              placeholder="Password"
             />
           </div>
-          <div className='grid gap-2'>
-            <Label htmlFor='password'>Confirm Password</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Confirm Password</Label>
             <Input
-              id='password_confirmation'
-              type='password'
+              id="password_confirmation"
+              type="password"
               value={passwordConfirmation}
               onChange={(e) => setPasswordConfirmation(e.target.value)}
-              autoComplete='new-password'
-              placeholder='Confirm Password'
+              autoComplete="new-password"
+              placeholder="Confirm Password"
             />
           </div>
-          <div className='grid gap-2'>
-            <Label htmlFor='image'>Profile Image (optional)</Label>
-            <div className='flex items-end gap-4'>
+          <div className="grid gap-2">
+            <Label htmlFor="image">Profile Image (optional)</Label>
+            <div className="flex items-end gap-4">
               {imagePreview && (
-                <div className='relative h-16 w-16 overflow-hidden rounded-sm'>
-                  <Image
-                    src={imagePreview}
-                    alt='Profile preview'
-                    layout='fill'
-                    objectFit='cover'
-                  />
+                <div className="relative h-16 w-16 overflow-hidden rounded-sm">
+                  <Image src={imagePreview} alt="Profile preview" layout="fill" objectFit="cover" />
                 </div>
               )}
-              <div className='flex w-full items-center gap-2'>
+              <div className="flex w-full items-center gap-2">
                 <Input
-                  id='image'
-                  type='file'
-                  accept='image/*'
+                  id="image"
+                  type="file"
+                  accept="image/*"
                   onChange={handleImageChange}
-                  className='w-full'
+                  className="w-full"
                 />
                 {imagePreview && (
                   <X
-                    className='cursor-pointer'
+                    className="cursor-pointer"
                     onClick={() => {
                       setImage(null);
                       setImagePreview(null);
@@ -146,8 +141,8 @@ export function SignUp() {
             </div>
           </div>
           <Button
-            type='submit'
-            className='w-full'
+            type="submit"
+            className="w-full"
             disabled={loading}
             onClick={async () => {
               await signUp.email({
@@ -173,11 +168,7 @@ export function SignUp() {
               });
             }}
           >
-            {loading ? (
-              <Loader2 size={16} className='animate-spin' />
-            ) : (
-              'Create an account'
-            )}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create an account'}
           </Button>
         </div>
       </CardContent>
