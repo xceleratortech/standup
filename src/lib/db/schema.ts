@@ -83,7 +83,8 @@ export const meetingRecording = pgTable('meeting_recording', {
   fileKey: text('file_key').notNull(),
   recordingUrl: text('recording_url'),
   recordingName: text('recording_name'),
-  duration: text('duration'),
+  duration: text('duration'), // We'll keep this as text to maintain flexibility in format (MM:SS)
+  durationSeconds: text('duration_seconds'), // Add new field for storing duration in seconds
   createdById: text('created_by_id')
     .notNull()
     .references(() => user.id),

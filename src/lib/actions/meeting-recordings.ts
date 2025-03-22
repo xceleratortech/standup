@@ -94,11 +94,13 @@ export async function addMeetingRecording({
   fileKey,
   recordingName,
   duration,
+  durationSeconds,
 }: {
   meetingId: string;
   fileKey: string;
   recordingName?: string;
   duration?: string;
+  durationSeconds?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -161,6 +163,7 @@ export async function addMeetingRecording({
       recordingName:
         recordingName || `Recording ${new Date().toLocaleString()}`,
       duration,
+      durationSeconds, // Store the duration in seconds
       createdById: userId,
     })
     .returning();

@@ -4,6 +4,7 @@ import './globals.css';
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from '@/components/ui/sonner';
 import { Providers } from '@/lib/providers';
+import { DraftRecordingsProvider } from '@/contexts/draft-recordings-context';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -30,9 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextTopLoader color='#2563eb' showSpinner={false} height={3} />
-        <Providers>{children}</Providers>
-        <Toaster position='top-right' />
+        <NextTopLoader color='#2563eb' height={2} />
+        <Providers>
+          <DraftRecordingsProvider>
+            {children}
+            <Toaster position='top-right' />
+          </DraftRecordingsProvider>
+        </Providers>
       </body>
     </html>
   );

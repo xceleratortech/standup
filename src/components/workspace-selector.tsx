@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronDown, Building } from 'lucide-react';
 import {
   Command,
   CommandEmpty,
@@ -34,24 +34,30 @@ export function WorkspaceSelector({
   workspaces,
 }: WorkspaceSelectorProps) {
   const [open, setOpen] = useState(false);
+  const currentWorkspace = workspaces.find(
+    (workspace) => workspace.id === currentWorkspaceId
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant='outline'
+          variant='ghost'
+          size='sm'
           role='combobox'
           aria-expanded={open}
-          className='w-full justify-between border-gray-200 bg-white md:w-[260px]'
+          className='hover:bg-muted/50 flex items-center gap-1 px-2 font-medium'
         >
-          {workspaces.find((workspace) => workspace.id === currentWorkspaceId)
-            ?.name || 'Select workspace...'}
-          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+          <Building className='text-muted-foreground h-4 w-4' />
+          <span className='max-w-[120px] truncate md:max-w-[180px]'>
+            {currentWorkspace?.name || 'Select workspace'}
+          </span>
+          <ChevronDown className='h-4 w-4 shrink-0 opacity-70' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-full p-0 md:w-[260px]'>
+      <PopoverContent className='w-[220px] p-0'>
         <Command>
-          <CommandInput placeholder='Search workspace...' />
+          <CommandInput placeholder='Find workspace...' className='text-sm' />
           <CommandEmpty>No workspace found.</CommandEmpty>
           <CommandList>
             <CommandGroup>
@@ -62,6 +68,7 @@ export function WorkspaceSelector({
                   onSelect={() => {
                     setOpen(false);
                   }}
+                  className='text-sm'
                 >
                   <Link
                     href={`/workspace/${workspace.id}`}
@@ -69,7 +76,7 @@ export function WorkspaceSelector({
                   >
                     <span className='flex-1 truncate'>{workspace.name}</span>
                     {workspace.id === currentWorkspaceId && (
-                      <Check className='ml-auto h-4 w-4' />
+                      <Check className='ml-auto h-3.5 w-3.5' />
                     )}
                   </Link>
                 </CommandItem>

@@ -15,6 +15,12 @@ import {
 import { getWorkspaceMeetings, createMeeting } from '@/lib/actions/meeting';
 import { toast } from 'sonner';
 
+import {
+  getWorkspaceMembers,
+  updateMemberRole,
+  removeMember,
+} from '@/lib/actions/workspace-members';
+
 // --- Recording hooks ---
 export function useMeetingRecordings(meetingId: string) {
   return useQuery({
@@ -152,6 +158,65 @@ export function useCreateMeeting() {
     onError: (error) => {
       console.error('Failed to create meeting:', error);
       toast.error('Failed to create meeting');
+    },
+  });
+}
+
+// --- Workspace member hooks ---
+export function useWorkspaceMembers(workspaceId: string) {
+  return useQuery({
+    queryKey: ['workspace-members', workspaceId],
+    queryFn: () => getWorkspaceMembers(workspaceId),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useUpdateMemberRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      workspaceId,
+      userId,
+      newRole,
+    }: {
+      workspaceId: string;
+      userId: string;
+      newRole: string;
+    }) => updateMemberRole({ workspaceId, userId, newRole }),
+    onSuccess: (_, { workspaceId }) => {
+      toast.success('Member role updated');
+      queryClient.invalidateQueries({
+        queryKey: ['workspace-members', workspaceId],
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to update member role:', error);
+      toast.error('Failed to update member role');
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      workspaceId,
+      userId,
+    }: {
+      workspaceId: string;
+      userId: string;
+    }) => removeMember({ workspaceId, userId }),
+    onSuccess: (_, { workspaceId }) => {
+      toast.success('Member removed');
+      queryClient.invalidateQueries({
+        queryKey: ['workspace-members', workspaceId],
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to remove member:', error);
+      toast.error('Failed to remove member');
     },
   });
 }

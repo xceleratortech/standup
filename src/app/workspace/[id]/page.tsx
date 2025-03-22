@@ -9,7 +9,7 @@ import MeetingsList from '@/components/meetings/meetings-list';
 import { db } from '@/lib/db';
 import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import RecordingControls from '@/components/meetings/recording-controls';
+import WorkspaceRecordingControls from '@/components/meetings/workspace-recording-controls';
 
 function LoadingWorkspace() {
   return (
@@ -92,15 +92,13 @@ export default async function WorkspacePage(props: {
     }
 
     return (
-      <div className='relative container mx-auto min-h-screen p-4 pb-24'>
+      <div className='relative container mx-auto min-h-screen p-4 pb-16'>
         <WorkspaceNav workspaceId={params.id} />
         <WorkspaceContent params={params} />
-        <div className='fixed right-0 bottom-0 left-0 z-10'>
-          <RecordingControls
-            workspaceId={params.id}
-            workspaceName={workspaceData.name}
-          />
-        </div>
+        <WorkspaceRecordingControls
+          workspaceId={params.id}
+          workspaceName={workspaceData.name}
+        />
       </div>
     );
   } catch (error) {

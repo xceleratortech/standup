@@ -1,4 +1,6 @@
 import { Suspense } from 'react';
+
+import { RecordingControls } from '@/components/meetings/recording-controls';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
@@ -11,10 +13,9 @@ import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import WorkspaceNav from '@/components/workspace-nav';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, ChevronLeft, Edit } from 'lucide-react';
+import { Calendar, Clock, Edit } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 import { RecordingList } from '@/components/meetings/recording-list';
 import MeetingTranscription from '@/components/meetings/meeting-transcription';
 import MeetingOutcomes from '@/components/meetings/meeting-outcomes';
@@ -73,7 +74,7 @@ async function MeetingData({
   // Format dates for display
   const startTimeFormatted = meeting.startTime
     ? format(new Date(meeting.startTime), 'PPP p')
-    : 'Not set';
+    : 'Not scheduled';
 
   const durationFormatted =
     meeting.startTime && meeting.endTime
@@ -81,52 +82,62 @@ async function MeetingData({
       : 'Unknown duration';
 
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div className='space-y-1'>
-          <div className='flex items-center gap-2'>
-            <Link
-              href={`/workspace/${params.id}`}
-              className='text-muted-foreground hover:text-foreground flex items-center text-sm'
-            >
-              <ChevronLeft className='mr-1 h-4 w-4' />
-              Back to Meetings
-            </Link>
+    <div className='space-y-2'>
+      {/* Meeting Header */}
+      <div>
+        <div className='flex flex-col justify-between gap-2 sm:flex-row sm:items-center'>
+          <div>
+            <h1 className='text-2xl font-medium tracking-tight'>
+              {meeting.title}
+            </h1>
+            <div className='text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm'>
+              <Calendar className='h-4 w-4' />
+              <span>{startTimeFormatted}</span>
+              {meeting.startTime && meeting.endTime && (
+                <>
+                  <span className='px-1'>•</span>
+                  <Clock className='h-4 w-4' />
+                  <span>{durationFormatted}</span>
+                </>
+              )}
+              <span className='px-1'>•</span>
+              <span>
+                Created{' '}
+                {formatDistanceToNow(new Date(meeting.createdAt), {
+                  addSuffix: true,
+                })}
+              </span>
+            </div>
           </div>
-          <h1 className='text-3xl font-bold tracking-tight'>{meeting.title}</h1>
-          <p className='text-muted-foreground'>
-            Created{' '}
-            {formatDistanceToNow(new Date(meeting.createdAt), {
-              addSuffix: true,
-            })}
-          </p>
+
+          {canEdit && (
+            <Button variant='outline' size='sm' className='shrink-0 gap-2'>
+              <Edit className='h-4 w-4' />
+              Edit
+            </Button>
+          )}
         </div>
 
-        {canEdit && (
-          <Button size='sm' className='gap-2'>
-            <Edit className='h-4 w-4' />
-            Edit Meeting
-          </Button>
+        {meeting.description && (
+          <p className='text-muted-foreground mt-4 text-sm'>
+            {meeting.description}
+          </p>
         )}
       </div>
 
-      <Separator />
+      <div className='grid grid-cols-1 gap-6 lg:grid-cols-3'>
+        <div className='space-y-8 lg:col-span-2'>
+          {/* Recordings Section */}
+          <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
 
-      <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
-        <div className='space-y-6 md:col-span-2'>
-          {meeting.description && (
-            <div className='space-y-2'>
-              <h2 className='text-xl font-semibold'>Description</h2>
-              <p className='text-muted-foreground'>{meeting.description}</p>
+          {/* Transcription Section */}
+          {meeting.transcription && (
+            <div className='rounded-lg border p-4'>
+              <MeetingTranscription transcription={meeting.transcription} />
             </div>
           )}
 
-          <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
-
-          {meeting.transcription && (
-            <MeetingTranscription transcription={meeting.transcription} />
-          )}
-
+          {/* Outcomes Section */}
           <MeetingOutcomes
             meetingId={params.meetingId}
             canEdit={canEdit}
@@ -134,23 +145,17 @@ async function MeetingData({
           />
         </div>
 
+        {/* Sidebar */}
         <div className='space-y-6'>
-          <div className='space-y-4 rounded-lg border p-4'>
-            <h3 className='font-medium'>Meeting Details</h3>
-            <div className='space-y-3'>
-              <div className='flex items-center gap-2'>
-                <Calendar className='text-muted-foreground h-4 w-4' />
-                <span className='text-sm'>{startTimeFormatted}</span>
-              </div>
-              {meeting.startTime && meeting.endTime && (
-                <div className='flex items-center gap-2'>
-                  <Clock className='text-muted-foreground h-4 w-4' />
-                  <span className='text-sm'>{durationFormatted}</span>
-                </div>
-              )}
-            </div>
+          {/* Recording Controls */}
+          <div className='overflow-hidden rounded-lg'>
+            <RecordingControls
+              defaultSelectedMeetingId={params.meetingId}
+              workspaceId={params.id}
+            />
           </div>
 
+          {/* Participants */}
           <MeetingParticipants
             meetingId={params.meetingId}
             workspaceId={params.id}
@@ -197,9 +202,27 @@ export default async function MeetingPage(props: {
       redirect('/workspace/create');
     }
 
+    // Get meeting title for the breadcrumb
+    const meeting = await getMeeting(params.meetingId);
+
+    // Define breadcrumbs for navigation with actual meeting title
+    const breadcrumbs = [
+      {
+        label: 'Meetings',
+        href: `/workspace/${params.id}`,
+      },
+      {
+        label: meeting.title,
+        href: `/workspace/${params.id}/meeting/${params.meetingId}`,
+        current: true,
+      },
+    ];
+
     return (
-      <div className='container mx-auto p-4 pb-24'>
-        <WorkspaceNav workspaceId={params.id} />
+      <div className='container mx-auto pb-20'>
+        <div className='my-2'>
+          <WorkspaceNav workspaceId={params.id} breadcrumbs={breadcrumbs} />
+        </div>
         <MeetingContent params={params} />
       </div>
     );
