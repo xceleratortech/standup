@@ -3,9 +3,16 @@
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { meeting, meetingOutcome, meetingParticipant, workspaceUser } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import {
+  meeting,
+  meetingOutcome,
+  meetingParticipant,
+  workspaceUser,
+  meetingRecording,
+} from '@/lib/db/schema';
+import { eq, and, isNotNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { generateOutcome } from './ai/generate';
 
 // Create a meeting outcome
 export async function createMeetingOutcome({
@@ -270,4 +277,93 @@ export async function deleteMeetingOutcome(outcomeId: string) {
 
   revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`);
   return { success: true };
+}
+
+// Generate an outcome from meeting recordings with transcriptions
+export async function generateMeetingOutcome({
+  meetingId,
+  outcomeType,
+  additionalPrompt,
+}: {
+  meetingId: string;
+  outcomeType: 'summary' | 'actions';
+  additionalPrompt?: string;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  // Get the meeting
+  const meetingData = await db.query.meeting.findFirst({
+    where: eq(meeting.id, meetingId),
+  });
+
+  if (!meetingData) {
+    throw new Error('Meeting not found');
+  }
+
+  // Check if user has access to this workspace
+  const userWorkspace = await db.query.workspaceUser.findFirst({
+    where: and(
+      eq(workspaceUser.workspaceId, meetingData.workspaceId),
+      eq(workspaceUser.userId, userId)
+    ),
+  });
+
+  if (!userWorkspace) {
+    throw new Error("You don't have access to this meeting");
+  }
+
+  // Check if user can edit this meeting (admin, creator, or editor role)
+  const participant = await db.query.meetingParticipant.findFirst({
+    where: and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)),
+  });
+
+  const canEdit =
+    userWorkspace.role === 'admin' ||
+    meetingData.createdById === userId ||
+    participant?.role === 'organizer' ||
+    participant?.role === 'editor';
+
+  if (!canEdit) {
+    throw new Error("You don't have permission to create outcomes for this meeting");
+  }
+
+  // Get all recordings with transcriptions for this meeting
+  const recordings = await db
+    .select()
+    .from(meetingRecording)
+    .where(
+      and(eq(meetingRecording.meetingId, meetingId), isNotNull(meetingRecording.transcription))
+    );
+
+  if (recordings.length === 0) {
+    throw new Error('No transcriptions found for this meeting');
+  }
+
+  // Extract transcriptions
+  const transcripts = recordings.map((recording) => recording.transcription as string);
+
+  // Generate content using AI
+  const content = await generateOutcome(transcripts, outcomeType, additionalPrompt);
+
+  // Create the outcome
+  const [outcome] = await db
+    .insert(meetingOutcome)
+    .values({
+      meetingId,
+      type: outcomeType === 'summary' ? 'Summary' : 'Action Items',
+      content,
+      createdById: userId,
+    })
+    .returning();
+
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
+  return outcome;
 }

@@ -2,7 +2,7 @@
 
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
-import { s3Client, S3_BUCKET, generateDownloadUrl } from '@/lib/s3';
+import { s3Client, S3_BUCKET } from '@/lib/s3';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -193,5 +193,28 @@ export async function getTranscriptionFromAudioFile(
   } catch (error: any) {
     console.error('Error generating transcription from S3:', error);
     throw new Error(error.message || 'Failed to generate transcription from S3');
+  }
+}
+
+export async function generateOutcome(
+  transcripts: string[],
+  outcomeType: 'summary' | 'actions',
+  additionalPrompt?: string
+) {
+  try {
+    const prompt = `You are an AI assistant tasked with generating ${outcomeType} from a list of transcripts.
+      ${additionalPrompt ? additionalPrompt + '\n' : ''}
+      Please provide the ${outcomeType} in markdown format.`;
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+
+    const content = [prompt, ...transcripts];
+    const result = await model.generateContent(content);
+    const text = result.response.text();
+    console.log(`Generated ${outcomeType}:`, text);
+    return text;
+  } catch (error: any) {
+    console.error(`Error generating ${outcomeType}:`, error);
+    throw new Error(error.message || `Failed to generate ${outcomeType}`);
   }
 }

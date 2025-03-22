@@ -5,7 +5,11 @@ import {
   deleteRecording,
   generateMissingTranscriptions,
 } from '@/lib/actions/meeting-recordings';
-import { getMeetingOutcomes, deleteMeetingOutcome } from '@/lib/actions/meeting-outcomes';
+import {
+  getMeetingOutcomes,
+  deleteMeetingOutcome,
+  generateMeetingOutcome,
+} from '@/lib/actions/meeting-outcomes';
 import { getMeetingParticipants, removeParticipant } from '@/lib/actions/meeting-participants';
 import { getWorkspaceMeetings, createMeeting } from '@/lib/actions/meeting';
 import { toast } from 'sonner';
@@ -134,6 +138,33 @@ export function useDeleteOutcome() {
     onError: (error) => {
       console.error('Failed to delete outcome:', error);
       toast.error('Failed to delete outcome');
+    },
+  });
+}
+
+// --- Generate outcome hook ---
+export function useGenerateOutcome(meetingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      outcomeType,
+      additionalPrompt,
+    }: {
+      outcomeType: 'summary' | 'actions';
+      additionalPrompt?: string;
+    }) => generateMeetingOutcome({ meetingId, outcomeType, additionalPrompt }),
+    onSuccess: (newOutcome: any) => {
+      toast.success(`${newOutcome.type} generated successfully`);
+
+      // Update the outcomes list
+      queryClient.invalidateQueries({
+        queryKey: ['outcomes', meetingId],
+      });
+    },
+    onError: (error: any) => {
+      console.error('Failed to generate outcome:', error);
+      toast.error(error.message || 'Failed to generate outcome');
     },
   });
 }
