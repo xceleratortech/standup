@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Card,
@@ -16,10 +16,26 @@ import SignIn from './sign-in';
 export function Authenticate() {
   const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>('login');
   const [transitioning, setTransitioning] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number>(0);
 
   // Fix the ref type to be specific to HTMLDivElement
   const signInRef = useRef<HTMLDivElement>(null);
   const signUpRef = useRef<HTMLDivElement>(null);
+
+  // Effect to update height when tabs change or component mounts
+  useLayoutEffect(() => {
+    if (signInRef.current && selectedTab === 'login') {
+      setContentHeight(signInRef.current.offsetHeight);
+    } else if (signUpRef.current && selectedTab === 'signup') {
+      setContentHeight(signUpRef.current.offsetHeight);
+    }
+  }, [selectedTab, isMounted]);
+
+  // Set mounted state after component mounts
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Rest of the component remains the same
   const handleTabChange = (value: string) => {
@@ -31,7 +47,7 @@ export function Authenticate() {
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden pb-0">
       <CardHeader>
         <CardTitle>Authentication</CardTitle>
         <CardDescription>Sign in or create an account to get started</CardDescription>
@@ -55,12 +71,10 @@ export function Authenticate() {
         </div>
 
         <div
-          className="relative overflow-hidden"
+          className="transition-height relative overflow-hidden duration-300"
           style={{
-            height:
-              selectedTab === 'login'
-                ? signInRef.current?.offsetHeight
-                : signUpRef.current?.offsetHeight,
+            height: contentHeight ? `${contentHeight}px` : 'auto',
+            minHeight: '200px', // Provide a default minimum height
           }}
         >
           <div
