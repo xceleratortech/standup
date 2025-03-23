@@ -6,8 +6,10 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import UserProfileMenu from './user-profile-menu';
 import Link from 'next/link';
-import { ChevronRight, CassetteTape } from 'lucide-react';
+import { ChevronRight, CassetteTape, Menu, Cog, Mic } from 'lucide-react';
 import VoiceIdentityDialog from './voice-identity-dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 
 interface BreadcrumbItem {
   label: string;
@@ -54,66 +56,182 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
   }));
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="container flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="mr-2 flex items-center gap-2">
+    <div className="flex w-full items-center justify-center p-2 md:p-0">
+      <div className="container mx-auto flex max-w-screen-xl items-center justify-between">
+        {/* Logo - visible on all screen sizes */}
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <CassetteTape className="h-6 w-6 text-blue-500" />
-            <span className="hidden text-lg font-semibold sm:inline-block">Standup</span>
+            <span className="text-lg font-semibold">Standup</span>
           </Link>
-
-          <WorkspaceSelector currentWorkspaceId={workspaceId} workspaces={simplifiedWorkspaces} />
-
-          {breadcrumbs && breadcrumbs.length > 0 && (
-            <nav className="flex" aria-label="Breadcrumb">
-              <ol className="flex items-center space-x-1">
-                {breadcrumbs.map((item, index) => (
-                  <li key={item.href} className="flex items-center">
-                    {index > 0 && <ChevronRight className="text-muted-foreground mx-1 h-4 w-4" />}
-                    <Link
-                      href={item.href}
-                      aria-current={item.current ? 'page' : undefined}
-                      className={`text-sm ${item.current ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
-
-          <WorkspaceSettingsDialog
-            workspace={workspace}
-            members={members}
-            currentUserId={session?.user?.id || ''}
-          />
         </div>
 
+        {/* Middle section - different on mobile vs desktop */}
+        <div className="flex-1 px-4">
+          {/* Desktop navigation elements - only visible on md screens and above */}
+          <div className="hidden items-center gap-4 md:flex">
+            <WorkspaceSelector currentWorkspaceId={workspaceId} workspaces={simplifiedWorkspaces} />
+
+            {breadcrumbs && breadcrumbs.length > 0 && (
+              <nav className="flex" aria-label="Breadcrumb">
+                <ol className="flex items-center space-x-1">
+                  {breadcrumbs.map((item, index) => (
+                    <li key={item.href} className="flex items-center">
+                      {index > 0 && <ChevronRight className="text-muted-foreground mx-1 h-4 w-4" />}
+                      <Link
+                        href={item.href}
+                        aria-current={item.current ? 'page' : undefined}
+                        className={`text-sm ${item.current ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+
+            <WorkspaceSettingsDialog
+              workspace={workspace}
+              members={members}
+              currentUserId={session?.user?.id || ''}
+            />
+          </div>
+
+          {/* Mobile workspace selector - only visible on small screens */}
+          <div className="flex items-center justify-center md:hidden">
+            <WorkspaceSelector currentWorkspaceId={workspaceId} workspaces={simplifiedWorkspaces} />
+          </div>
+        </div>
+
+        {/* Right section - different components for mobile vs desktop */}
         <div className="flex items-center gap-2">
-          <VoiceIdentityDialog
-            workspaceId={workspaceId}
-            hasVoiceIdentity={!!voiceIdentity}
-            voiceIdentity={voiceIdentity}
-            currentUser={
-              session?.user
-                ? {
-                    ...session.user,
-                    image: session.user.image || null,
-                  }
-                : undefined
-            }
-          />
-          <UserProfileMenu
-            user={
-              session?.user
-                ? {
-                    ...session.user,
-                    image: session.user.image || null,
-                  }
-                : undefined
-            }
-          />
+          {/* Desktop controls */}
+          <div className="hidden items-center gap-2 md:flex">
+            <VoiceIdentityDialog
+              workspaceId={workspaceId}
+              hasVoiceIdentity={!!voiceIdentity}
+              voiceIdentity={voiceIdentity}
+              currentUser={
+                session?.user
+                  ? {
+                      ...session.user,
+                      image: session.user.image || null,
+                    }
+                  : undefined
+              }
+            />
+            <UserProfileMenu
+              user={
+                session?.user
+                  ? {
+                      ...session.user,
+                      image: session.user.image || null,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+
+          {/* Mobile controls */}
+          <div className="flex items-center gap-2 md:hidden">
+            {/* Menu dialog */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Menu</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogTitle className="text-lg font-medium">Navigation Menu</DialogTitle>
+                <div className="flex flex-col gap-4 py-2">
+                  {breadcrumbs && breadcrumbs.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-muted-foreground text-sm font-medium">Pages</h3>
+                      <nav className="flex" aria-label="Breadcrumb">
+                        <ol className="flex w-full flex-col items-start space-y-2">
+                          {breadcrumbs.map((item) => (
+                            <li key={item.href} className="w-full">
+                              <Button
+                                variant={item.current ? 'default' : 'ghost'}
+                                asChild
+                                className="w-full justify-start"
+                              >
+                                <Link
+                                  href={item.href}
+                                  aria-current={item.current ? 'page' : undefined}
+                                >
+                                  {item.label}
+                                </Link>
+                              </Button>
+                            </li>
+                          ))}
+                        </ol>
+                      </nav>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4">
+                    <h3 className="text-muted-foreground text-sm font-medium">Workspace</h3>
+
+                    {/* Direct embedding of the dialog components with full button styling */}
+                    <div className="space-y-2">
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <Link href={`/workspaces/${workspaceId}/settings`}>
+                          <Cog className="mr-2 h-4 w-4" />
+                          Workspace Settings
+                        </Link>
+                      </Button>
+
+                      <WorkspaceSettingsDialog
+                        workspace={workspace}
+                        members={members}
+                        currentUserId={session?.user?.id || ''}
+                        className="w-full"
+                        buttonVariant="outline"
+                        buttonClassName="w-full justify-start hidden" // Hide this button as we're using the link above
+                      />
+
+                      <VoiceIdentityDialog
+                        workspaceId={workspaceId}
+                        hasVoiceIdentity={!!voiceIdentity}
+                        voiceIdentity={voiceIdentity}
+                        currentUser={
+                          session?.user
+                            ? {
+                                ...session.user,
+                                image: session.user.image || null,
+                              }
+                            : undefined
+                        }
+                        className="w-full"
+                        buttonVariant="outline"
+                        buttonClassName="w-full justify-start"
+                        buttonLabel={
+                          <>
+                            <Mic className="mr-2 h-4 w-4" />
+                            Voice Identity
+                          </>
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <UserProfileMenu
+              user={
+                session?.user
+                  ? {
+                      ...session.user,
+                      image: session.user.image || null,
+                    }
+                  : undefined
+              }
+            />
+          </div>
         </div>
       </div>
     </div>

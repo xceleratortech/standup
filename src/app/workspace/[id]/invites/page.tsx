@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import DeleteInviteButton from './delete-button';
+import WorkspaceNav from '@/components/workspace-nav';
 
 function LoadingInvites() {
   return (
@@ -34,16 +35,16 @@ async function InvitesData({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Pending Invites</h1>
-          <p className="text-muted-foreground">{workspace.name}</p>
+          <h1 className="text-xl font-bold">Pending Invites</h1>
+          <p className="text-muted-foreground text-sm">{workspace.name}</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" size="sm">
             <Link href={`/workspace/${params.id}`}>Back to Workspace</Link>
           </Button>
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href={`/workspace/${params.id}/invite`}>New Invite</Link>
           </Button>
         </div>
@@ -51,7 +52,12 @@ async function InvitesData({ params }: { params: { id: string } }) {
 
       <div className="rounded-lg border">
         {invites.length === 0 ? (
-          <div className="text-muted-foreground p-6 text-center">No pending invites</div>
+          <div className="p-6 text-center">
+            <p className="text-muted-foreground mb-4">No pending invites</p>
+            <Button asChild size="sm">
+              <Link href={`/workspace/${params.id}/invite`}>New Invite</Link>
+            </Button>
+          </div>
         ) : (
           <div className="divide-y">
             {invites.map((invite) => (
@@ -104,8 +110,14 @@ export default async function WorkspaceInvitesPage(props: { params: Promise<{ id
       redirect(`/workspace/${params.id}`);
     }
 
+    const breadcrumbs = [
+      { label: workspace.name || 'Workspace', href: `/workspace/${params.id}` },
+      { label: 'Invites', href: `/workspace/${params.id}/invites`, current: true },
+    ];
+
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto space-y-2 p-6">
+        <WorkspaceNav workspaceId={params.id} breadcrumbs={breadcrumbs} />
         <InvitesContent params={params} />
       </div>
     );

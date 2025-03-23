@@ -1,6 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { VariantProps } from 'class-variance-authority';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
 
 type Workspace = InferSelectModel<typeof workspace>;
 
@@ -42,12 +45,20 @@ interface WorkspaceSettingsDialogProps {
   workspace: Workspace;
   members: any[];
   currentUserId: string;
+  className?: string;
+  buttonVariant?: VariantProps<typeof buttonVariants>['variant'];
+  buttonClassName?: string;
+  buttonLabel?: ReactNode;
 }
 
 function WorkspaceSettingsDialog({
   workspace,
   members,
   currentUserId,
+  className,
+  buttonVariant = 'ghost',
+  buttonClassName,
+  buttonLabel,
 }: WorkspaceSettingsDialogProps) {
   const router = useRouter();
   const [openAlert, setOpenAlert] = useState(false);
@@ -119,11 +130,15 @@ function WorkspaceSettingsDialog({
   const alertContent = getAlertContent();
 
   return (
-    <>
+    <div className={className}>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <Cog className="h-4 w-4" />
+          <Button
+            variant={buttonVariant}
+            size={buttonLabel ? 'default' : 'icon'}
+            className={cn('workspace-settings-trigger', buttonClassName)}
+          >
+            {buttonLabel || <Cog className="h-4 w-4" />}
           </Button>
         </DialogTrigger>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[480px]">
@@ -300,7 +315,7 @@ function WorkspaceSettingsDialog({
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </>
+    </div>
   );
 }
 

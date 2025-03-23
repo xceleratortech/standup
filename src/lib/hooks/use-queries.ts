@@ -9,6 +9,7 @@ import {
   getMeetingOutcomes,
   deleteMeetingOutcome,
   generateMeetingOutcome,
+  updateMeetingOutcome,
 } from '@/lib/actions/meeting-outcomes';
 import { getMeetingParticipants, removeParticipant } from '@/lib/actions/meeting-participants';
 import { getWorkspaceMeetings, createMeeting } from '@/lib/actions/meeting';
@@ -113,6 +114,18 @@ export function useVoiceIdentityDownloadUrl() {
   });
 }
 
+// Add a hook to manage voice identity operations
+export function useVoiceIdentityOperations() {
+  const queryClient = useQueryClient();
+
+  return {
+    invalidateVoiceIdentity: (workspaceId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['voiceIdentity', workspaceId] });
+    },
+  };
+}
+
 // --- Outcome hooks ---
 export function useMeetingOutcomes(meetingId: string) {
   return useQuery({
@@ -138,6 +151,28 @@ export function useDeleteOutcome() {
     onError: (error) => {
       console.error('Failed to delete outcome:', error);
       toast.error('Failed to delete outcome');
+    },
+  });
+}
+
+export function useUpdateOutcome() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      outcomeId,
+      type,
+      content,
+    }: {
+      outcomeId: string;
+      type?: string;
+      content?: string;
+    }) => {
+      return await updateMeetingOutcome({ outcomeId, type, content });
+    },
+    onSuccess: () => {
+      // Invalidate all meeting outcomes queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['meetingOutcomes'] });
     },
   });
 }

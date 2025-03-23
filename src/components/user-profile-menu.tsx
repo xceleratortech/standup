@@ -16,6 +16,7 @@ import { LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import Avvvatars from 'avvvatars-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface UserProfileMenuProps {
   user?: {
@@ -29,6 +30,8 @@ interface UserProfileMenuProps {
 function UserProfileMenu({ user }: UserProfileMenuProps) {
   const [imageError, setImageError] = useState(false);
 
+  const router = useRouter();
+
   if (!user) {
     return (
       <Button asChild variant="ghost" size="sm">
@@ -39,6 +42,7 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
 
   const handleSignOut = async () => {
     await signOut();
+    router.push('/');
   };
 
   const handleImageError = () => {

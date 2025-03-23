@@ -126,19 +126,19 @@ export async function getWorkspaceMeetings(workspaceId: string) {
 
 // Update a meeting
 export async function updateMeeting({
+  id,
   meetingId,
   title,
   description,
   startTime,
   endTime,
-  transcription,
 }: {
-  meetingId: string;
+  id?: string;
+  meetingId?: string;
   title?: string;
-  description?: string;
+  description?: string | null;
   startTime?: Date;
   endTime?: Date;
-  transcription?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -150,9 +150,16 @@ export async function updateMeeting({
 
   const userId = session.user.id;
 
+  // Use id or meetingId (for backward compatibility)
+  const meetingIdToUse = id || meetingId;
+
+  if (!meetingIdToUse) {
+    throw new Error('Meeting ID is required');
+  }
+
   // Get the meeting
   const meetingData = await db.query.meeting.findFirst({
-    where: eq(meeting.id, meetingId),
+    where: eq(meeting.id, meetingIdToUse),
   });
 
   if (!meetingData) {
@@ -188,10 +195,10 @@ export async function updateMeeting({
       endTime: endTime !== undefined ? endTime : meetingData.endTime,
       updatedAt: new Date(),
     })
-    .where(eq(meeting.id, meetingId))
+    .where(eq(meeting.id, meetingIdToUse))
     .returning();
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingIdToUse}`);
   return updatedMeeting;
 }
 

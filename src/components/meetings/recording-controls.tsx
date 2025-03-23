@@ -141,7 +141,7 @@ function RecordButton({
     return (
       <Button
         size="icon"
-        className="h-auto flex-1 rounded-xl bg-red-500 shadow-md hover:bg-red-600"
+        className="h-auto flex-1 rounded-xl bg-red-600/70 shadow-md hover:bg-red-600"
         onClick={onStart}
       >
         <Mic className="h-7 w-7 text-white" />

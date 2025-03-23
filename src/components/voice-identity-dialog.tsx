@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Square, Pause, Trash2, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -18,7 +19,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { AudioPlayer } from '@/components/ui/audio-player';
-import { useVoiceIdentityDownloadUrl } from '@/lib/hooks/use-queries';
+import { useVoiceIdentityDownloadUrl, useVoiceIdentityOperations } from '@/lib/hooks/use-queries';
 import {
   saveUserVoiceIdentity,
   deleteUserVoiceIdentity,
@@ -26,6 +27,9 @@ import {
 } from '@/lib/actions/workspace';
 import { user } from '@/lib/db/auth-schema';
 import { InferSelectModel } from 'drizzle-orm';
+import { cn } from '@/lib/utils';
+import { VariantProps } from 'class-variance-authority';
+import { ReactNode } from 'react';
 
 type User = InferSelectModel<typeof user>;
 
@@ -34,6 +38,10 @@ interface VoiceIdentityDialogProps {
   hasVoiceIdentity: boolean;
   voiceIdentity?: any;
   currentUser?: User;
+  className?: string;
+  buttonVariant?: VariantProps<typeof buttonVariants>['variant'];
+  buttonClassName?: string;
+  buttonLabel?: ReactNode;
 }
 
 export default function VoiceIdentityDialog({
@@ -41,6 +49,10 @@ export default function VoiceIdentityDialog({
   hasVoiceIdentity,
   voiceIdentity,
   currentUser,
+  className,
+  buttonVariant = 'ghost',
+  buttonClassName,
+  buttonLabel,
 }: VoiceIdentityDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -54,6 +66,7 @@ export default function VoiceIdentityDialog({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isNewRecordingMode, setIsNewRecordingMode] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -65,6 +78,7 @@ export default function VoiceIdentityDialog({
   const animationFrameRef = useRef<number | null>(null);
 
   const { mutateAsync: getDownloadUrl } = useVoiceIdentityDownloadUrl();
+  const { invalidateVoiceIdentity } = useVoiceIdentityOperations();
 
   useEffect(() => {
     return () => {
@@ -89,14 +103,15 @@ export default function VoiceIdentityDialog({
     } else {
       setRecordingName(`Voice of ${currentUser?.name || 'Me'}`);
     }
+
+    // Reset new recording mode when dialog opens/closes
+    setIsNewRecordingMode(false);
   }, [isOpen, voiceIdentity, currentUser, hasVoiceIdentity]);
 
   // Fetch the audio URL from S3
   const fetchAudioUrl = async (fileKey: string) => {
     try {
-      console.log('Fetching audio from S3, fileKey:', fileKey);
       const { downloadUrl } = await getDownloadUrl(fileKey);
-      console.log('Received URL:', downloadUrl);
       setAudioUrl(downloadUrl);
     } catch (error) {
       console.error('Error fetching audio URL:', error);
@@ -147,6 +162,9 @@ export default function VoiceIdentityDialog({
     try {
       // Reset state before starting a new recording
       resetRecordingState();
+
+      // Set new recording mode to true
+      setIsNewRecordingMode(true);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -268,6 +286,7 @@ export default function VoiceIdentityDialog({
     }
 
     resetRecordingState();
+    setIsNewRecordingMode(false);
     toast.info('Recording discarded');
   };
 
@@ -324,10 +343,11 @@ export default function VoiceIdentityDialog({
             setUploadProgress(0);
             resetRecordingState();
             audioBlobRef.current = null;
+            setIsNewRecordingMode(false);
             setIsOpen(false);
 
-            // Refresh the page to show the updated voice identity
-            window.location.reload();
+            // Invalidate queries to refresh the data instead of reloading the page
+            invalidateVoiceIdentity(workspaceId);
           } catch (error) {
             console.error('Error saving voice identity:', error);
             setUploadError('Failed to save voice identity details.');
@@ -367,8 +387,8 @@ export default function VoiceIdentityDialog({
       setShowDeleteConfirm(false);
       setIsOpen(false);
 
-      // Refresh the page to reflect the deletion
-      window.location.reload();
+      // Invalidate queries to refresh the data instead of reloading the page
+      invalidateVoiceIdentity(workspaceId);
     } catch (error) {
       toast.error('Failed to delete voice identity');
       console.error('Error deleting voice identity:', error);
@@ -376,28 +396,18 @@ export default function VoiceIdentityDialog({
   };
 
   return (
-    <>
-      <Button
-        variant={hasVoiceIdentity ? 'outline' : 'secondary'}
-        size="sm"
-        className={`flex items-center gap-1 ${hasVoiceIdentity ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}
-        onClick={() => setIsOpen(true)}
-      >
-        {hasVoiceIdentity ? (
-          <>
-            <Mic className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Voice ID</span>
-          </>
-        ) : (
-          <>
-            <MicOff className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Set Voice ID</span>
-          </>
-        )}
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={(open) => !isUploading && setIsOpen(open)}>
-        <DialogContent className="sm:max-w-md">
+    <div className={className}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant={buttonVariant}
+            size={buttonLabel ? 'default' : 'icon'}
+            className={cn('voice-identity-trigger', buttonClassName)}
+          >
+            {buttonLabel || <Mic className="h-4 w-4" />}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {hasVoiceIdentity ? 'Your Voice Identity' : 'Set Up Voice Identity'}
@@ -411,7 +421,7 @@ export default function VoiceIdentityDialog({
 
           <div className="space-y-4 py-4">
             {/* Voice Sample Information */}
-            {hasVoiceIdentity && !isRecording && (
+            {hasVoiceIdentity && !isRecording && !isNewRecordingMode && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Badge variant="outline" className="text-xs font-normal">
@@ -540,7 +550,7 @@ export default function VoiceIdentityDialog({
             )}
 
             {/* Preview of recorded audio with custom player */}
-            {audioBlobRef.current && !isRecording && (
+            {audioBlobRef.current && !isRecording && isNewRecordingMode && (
               <div className="flex justify-center pt-2">
                 <AudioPlayer
                   src={audioUrl || ''}
@@ -602,6 +612,6 @@ export default function VoiceIdentityDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

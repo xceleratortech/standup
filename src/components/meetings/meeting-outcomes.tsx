@@ -33,10 +33,17 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useMeetingOutcomes, useDeleteOutcome, useGenerateOutcome } from '@/lib/hooks/use-queries';
+import {
+  useMeetingOutcomes,
+  useDeleteOutcome,
+  useGenerateOutcome,
+  useUpdateOutcome,
+} from '@/lib/hooks/use-queries';
 import { Spinner } from '@/components/ui/spinner';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
+import { LoadingButton } from '@/components/ui/loading-button'; // Import LoadingButton
 
 interface MeetingOutcomesProps {
   meetingId: string;
@@ -51,9 +58,14 @@ export default function MeetingOutcomes({
 }: MeetingOutcomesProps) {
   const { data: outcomes = initialOutcomes, isLoading } = useMeetingOutcomes(meetingId);
   const { mutate: deleteOutcome, isPending: isDeleting } = useDeleteOutcome();
+  const { mutate: updateOutcome, isPending: isUpdating } = useUpdateOutcome();
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [outcomeType, setOutcomeType] = useState<'summary' | 'actions'>('summary');
   const [additionalPrompt, setAdditionalPrompt] = useState('');
+  const [editingOutcome, setEditingOutcome] = useState<any>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editType, setEditType] = useState('');
   const router = useRouter();
 
   const {
@@ -83,6 +95,31 @@ export default function MeetingOutcomes({
         onSuccess: () => {
           setShowGenerateDialog(false);
           setAdditionalPrompt('');
+        },
+      }
+    );
+  };
+
+  const handleEdit = (outcome: any) => {
+    setEditingOutcome(outcome);
+    setEditContent(outcome.content);
+    setEditType(outcome.type.toLowerCase() === 'action items' ? 'actions' : 'summary');
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateOutcome = () => {
+    if (!editingOutcome) return;
+
+    updateOutcome(
+      {
+        outcomeId: editingOutcome.id,
+        content: editContent,
+        type: editType === 'actions' ? 'Action Items' : 'Summary',
+      },
+      {
+        onSuccess: () => {
+          setShowEditDialog(false);
+          setEditingOutcome(null);
         },
       }
     );
@@ -133,7 +170,12 @@ export default function MeetingOutcomes({
 
                   {canEdit && (
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEdit(outcome)}
+                      >
                         <Edit className="text-muted-foreground h-4 w-4" />
                       </Button>
 
@@ -158,14 +200,17 @@ export default function MeetingOutcomes({
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
+                            <LoadingButton
+                              variant="destructive"
+                              isLoading={isDeleting}
+                              loadingText="Deleting..."
                               onClick={(e) => {
                                 e.preventDefault();
                                 deleteOutcome(outcome.id);
                               }}
                             >
                               Delete
-                            </AlertDialogAction>
+                            </LoadingButton>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -174,9 +219,7 @@ export default function MeetingOutcomes({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="prose-sm prose dark:prose-invert max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: outcome.content }} />
-                </div>
+                <MarkdownRenderer content={outcome.content} />
               </CardContent>
               <CardFooter className="text-muted-foreground pt-2 text-xs">
                 Added{' '}
@@ -295,6 +338,82 @@ export default function MeetingOutcomes({
                 </>
               ) : (
                 'Generate'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Outcome Dialog */}
+      <Dialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          if (!isUpdating) setShowEditDialog(open);
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => {
+            if (isUpdating) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (isUpdating) e.preventDefault();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Edit Outcome</DialogTitle>
+            <DialogDescription>Update the content or type of this outcome.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-outcome-type">Outcome Type</Label>
+              <Select
+                disabled={isUpdating}
+                value={editType}
+                onValueChange={(value) => setEditType(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">Summary</SelectItem>
+                  <SelectItem value="actions">Action Items</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-content">Content</Label>
+              <Textarea
+                id="edit-content"
+                disabled={isUpdating}
+                placeholder="Enter the outcome content..."
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="resize-y"
+                rows={10}
+              />
+              <p className="text-muted-foreground text-xs">Markdown formatting is supported.</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateOutcome} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Updating...
+                </>
+              ) : (
+                'Save Changes'
               )}
             </Button>
           </DialogFooter>

@@ -29,7 +29,7 @@ export async function createWorkspace({ name }: { name: string }) {
   }
 
   const userId = session.user.id;
-  const slug = generateSlug(name);
+  const slug = generateSlug(name + ' ' + session.user.email);
 
   const [newWorkspace] = await db
     .insert(workspace)

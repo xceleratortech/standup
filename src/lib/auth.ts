@@ -27,6 +27,12 @@ export const auth = betterAuth({
     provider: 'pg',
   }),
   plugins: [nextCookies()],
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       const { subject, html } = createVerificationEmail(url);

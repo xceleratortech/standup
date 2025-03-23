@@ -380,7 +380,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                   onClick={() => toggleExpand(recording.id)}
                 >
                   <div className="flex items-center gap-2">
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 shrink-0"
@@ -392,7 +392,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                       ) : (
                         <Play className="h-4 w-4" />
                       )}
-                    </Button>
+                    </Button> */}
 
                     <div>
                       <p className="font-medium">
@@ -431,13 +431,21 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                       </Button>
                     )}
 
-                    <div className="text-muted-foreground ml-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(recording.id);
+                      }}
+                      className="h-8 w-8"
+                    >
                       {expandedRecordings[recording.id] ? (
                         <ChevronUp className="h-4 w-4" />
                       ) : (
                         <ChevronDown className="h-4 w-4" />
                       )}
-                    </div>
+                    </Button>
                   </div>
                 </div>
 

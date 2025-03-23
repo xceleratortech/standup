@@ -12,14 +12,12 @@ import { getMeetingOutcomes } from '@/lib/actions/meeting-outcomes';
 import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import WorkspaceNav from '@/components/workspace-nav';
-import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Edit } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
 import { RecordingList } from '@/components/meetings/recording-list';
-import MeetingTranscription from '@/components/meetings/meeting-transcription';
 import MeetingOutcomes from '@/components/meetings/meeting-outcomes';
 import MeetingParticipants from '@/components/meetings/meeting-participants';
+import { EditMeetingDialog } from '@/components/meetings/edit-meeting-dialog';
 
 function LoadingMeeting() {
   return (
@@ -73,7 +71,7 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
   return (
     <div className="space-y-2">
       {/* Meeting Header */}
-      <div>
+      <div className="px-3">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-medium tracking-tight">{meeting.title}</h1>
@@ -98,10 +96,11 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
           </div>
 
           {canEdit && (
-            <Button variant="outline" size="sm" className="shrink-0 gap-2">
-              <Edit className="h-4 w-4" />
-              Edit
-            </Button>
+            <EditMeetingDialog
+              meetingId={params.meetingId}
+              initialTitle={meeting.title}
+              initialDescription={meeting.description}
+            />
           )}
         </div>
 
@@ -110,7 +109,7 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 px-3 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           {/* Recordings Section */}
           <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
@@ -126,7 +125,7 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Recording Controls */}
-          <div className="overflow-hidden rounded-lg">
+          <div className="overflow-hidden rounded-xl">
             <RecordingControls
               defaultSelectedMeetingId={params.meetingId}
               workspaceId={params.id}
