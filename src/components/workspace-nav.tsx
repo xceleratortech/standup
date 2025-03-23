@@ -120,6 +120,13 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                     }
                   : undefined
               }
+              buttonLabel={
+                <>
+                  <Mic className="h-4 w-4" />
+                  {!!voiceIdentity ? 'Voice ID' : 'Set Up Voice ID'}
+                </>
+              }
+              buttonVariant="outline"
             />
             <UserProfileMenu
               user={
@@ -177,20 +184,20 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
 
                     {/* Direct embedding of the dialog components with full button styling */}
                     <div className="space-y-2">
-                      <Button variant="outline" className="w-full justify-start" asChild>
-                        <Link href={`/workspaces/${workspaceId}/settings`}>
-                          <Cog className="mr-2 h-4 w-4" />
-                          Workspace Settings
-                        </Link>
-                      </Button>
-
+                      {/* Remove the direct link and use the dialog component properly */}
                       <WorkspaceSettingsDialog
                         workspace={workspace}
                         members={members}
                         currentUserId={session?.user?.id || ''}
                         className="w-full"
                         buttonVariant="outline"
-                        buttonClassName="w-full justify-start hidden" // Hide this button as we're using the link above
+                        buttonClassName="w-full justify-start"
+                        buttonLabel={
+                          <>
+                            <Cog className="mr-2 h-4 w-4" />
+                            Workspace Settings
+                          </>
+                        }
                       />
 
                       <VoiceIdentityDialog

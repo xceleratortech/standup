@@ -76,7 +76,7 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
             <p className="text-muted-foreground text-xs leading-none">{user.email}</p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        {/* <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center">
@@ -90,7 +90,7 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
               <span>Settings</span>
             </Link>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
+        </DropdownMenuGroup> */}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />

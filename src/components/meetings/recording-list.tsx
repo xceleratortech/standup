@@ -3,7 +3,16 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Download, FilePlus, ChevronDown, ChevronUp, Play, Pause } from 'lucide-react';
+import {
+  Trash2,
+  Download,
+  FilePlus,
+  ChevronDown,
+  ChevronUp,
+  Play,
+  Pause,
+  Loader2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -65,6 +74,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPlaybackTimes, setCurrentPlaybackTimes] = useState<Record<string, number>>({});
+  const [loadingRecordings, setLoadingRecordings] = useState<Record<string, boolean>>({});
 
   // Add an effect to refresh recordings when the component mounts or when recordings change
   useEffect(() => {
@@ -251,10 +261,22 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
 
       // If expanding and we don't have the URL yet, fetch it
       if (!isCurrentlyExpanded && !recordingURLs[recordingId]) {
+        // Set loading state for this recording
+        setLoadingRecordings((prev) => ({
+          ...prev,
+          [recordingId]: true,
+        }));
+
         const { downloadUrl } = await getDownloadUrl(recordingId);
         setRecordingURLs((prev) => ({
           ...prev,
           [recordingId]: downloadUrl,
+        }));
+
+        // Clear loading state
+        setLoadingRecordings((prev) => ({
+          ...prev,
+          [recordingId]: false,
         }));
       }
 
@@ -273,6 +295,12 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
         }));
       }
     } catch (error) {
+      // Clear loading state in case of error
+      setLoadingRecordings((prev) => ({
+        ...prev,
+        [recordingId]: false,
+      }));
+
       console.error('Error fetching recording URL:', error);
       toast.error('Failed to load recording');
     }
@@ -439,8 +467,11 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                         toggleExpand(recording.id);
                       }}
                       className="h-8 w-8"
+                      disabled={loadingRecordings[recording.id]}
                     >
-                      {expandedRecordings[recording.id] ? (
+                      {loadingRecordings[recording.id] ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : expandedRecordings[recording.id] ? (
                         <ChevronUp className="h-4 w-4" />
                       ) : (
                         <ChevronDown className="h-4 w-4" />
