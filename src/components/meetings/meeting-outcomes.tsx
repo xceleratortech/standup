@@ -1,13 +1,21 @@
 'use client';
 
-import { ListChecks, Plus, FileText, CheckCircle, Edit, Trash2, ExternalLink } from 'lucide-react';
+import {
+  ListChecks,
+  Plus,
+  FileText,
+  CheckCircle,
+  Edit,
+  Trash2,
+  ExternalLink,
+  UserCircle2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -38,35 +46,53 @@ import {
   useDeleteOutcome,
   useGenerateOutcome,
   useUpdateOutcome,
+  useMeetingParticipants,
 } from '@/lib/hooks/use-queries';
 import { Spinner } from '@/components/ui/spinner';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
-import { LoadingButton } from '@/components/ui/loading-button'; // Import LoadingButton
+import { LoadingButton } from '@/components/ui/loading-button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface MeetingOutcomesProps {
   meetingId: string;
   canEdit: boolean;
   initialOutcomes?: any[];
+  currentUserId?: string;
 }
 
 export default function MeetingOutcomes({
   meetingId,
   canEdit,
   initialOutcomes = [],
+  currentUserId = '',
 }: MeetingOutcomesProps) {
   const { data: outcomes = initialOutcomes, isLoading } = useMeetingOutcomes(meetingId);
+  const { data: participants = [], isLoading: isLoadingParticipants } =
+    useMeetingParticipants(meetingId);
   const { mutate: deleteOutcome, isPending: isDeleting } = useDeleteOutcome();
   const { mutate: updateOutcome, isPending: isUpdating } = useUpdateOutcome();
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [outcomeType, setOutcomeType] = useState<'summary' | 'actions'>('summary');
   const [additionalPrompt, setAdditionalPrompt] = useState('');
+
+  // Initialize focusParticipant state after participants are loaded
+  const [focusParticipant, setFocusParticipant] = useState<string | null>(null);
+
+  // Set current user as focus participant when participants data loads
+  useEffect(() => {
+    if (!isLoadingParticipants && participants.length > 0 && currentUserId) {
+      const isUserParticipant = participants.some((p) => p.userId === currentUserId);
+      if (isUserParticipant) {
+        setFocusParticipant(currentUserId);
+      }
+    }
+  }, [participants, currentUserId, isLoadingParticipants]);
+
   const [editingOutcome, setEditingOutcome] = useState<any>(null);
   const [editContent, setEditContent] = useState('');
   const [editType, setEditType] = useState('');
-  const router = useRouter();
 
   const {
     mutate: generateOutcome,
@@ -90,11 +116,17 @@ export default function MeetingOutcomes({
       {
         outcomeType,
         additionalPrompt: additionalPrompt.trim() || undefined,
+        focusParticipantId: focusParticipant === 'all' ? undefined : focusParticipant || undefined,
       },
       {
         onSuccess: () => {
           setShowGenerateDialog(false);
           setAdditionalPrompt('');
+          setFocusParticipant(
+            currentUserId && participants.some((p) => p.userId === currentUserId)
+              ? currentUserId
+              : null
+          );
         },
       }
     );
@@ -132,6 +164,13 @@ export default function MeetingOutcomes({
       </div>
     );
   }
+
+  // Reset focus participant when the dialog is opened/closed
+  const resetFocusParticipant = () => {
+    // Check if current user is a participant
+    const isUserParticipant = participants.some((p) => p.userId === currentUserId);
+    setFocusParticipant(isUserParticipant ? currentUserId : null);
+  };
 
   return (
     <div className="space-y-4">
@@ -236,7 +275,14 @@ export default function MeetingOutcomes({
       <Dialog
         open={showGenerateDialog}
         onOpenChange={(open) => {
-          if (!isGenerating) setShowGenerateDialog(open);
+          if (!isGenerating) {
+            setShowGenerateDialog(open);
+            if (!open) {
+              // Reset to defaults when closing
+              resetFocusParticipant();
+              setAdditionalPrompt('');
+            }
+          }
         }}
       >
         <DialogContent
@@ -272,6 +318,93 @@ export default function MeetingOutcomes({
                   <SelectItem value="actions">Action Items</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Focus Participant Selector */}
+            <div className="grid gap-2">
+              <Label htmlFor="focus-participant">Focus On Participant</Label>
+              <Select
+                disabled={isGenerating || isLoadingParticipants}
+                value={focusParticipant || 'all'}
+                onValueChange={(value) => setFocusParticipant(value === 'all' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All participants">
+                    {isLoadingParticipants ? (
+                      <div className="flex items-center gap-2">
+                        <Spinner size="sm" />
+                        <span>Loading participants...</span>
+                      </div>
+                    ) : focusParticipant ? (
+                      <div className="flex items-center gap-2">
+                        {/* Add avatar for selected participant */}
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage
+                            src={
+                              participants.find((p) => p.userId === focusParticipant)?.image ||
+                              undefined
+                            }
+                          />
+                          <AvatarFallback>
+                            {participants.find((p) => p.userId === focusParticipant)?.name?.[0] ||
+                              '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {participants.find((p) => p.userId === focusParticipant)?.name ||
+                            'Selected participant'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <UserCircle2 className="text-muted-foreground h-4 w-4" />
+                        <span>All participants</span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <div className="flex items-center gap-2">
+                      <UserCircle2 className="text-muted-foreground h-4 w-4" />
+                      <span>All participants</span>
+                    </div>
+                  </SelectItem>
+                  {participants.map((participant) => (
+                    <SelectItem key={participant.userId} value={participant.userId}>
+                      {/* Updated layout for participant item */}
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={participant.image || undefined} />
+                          <AvatarFallback>
+                            {participant.name?.[0] || participant.email?.[0] || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span>
+                            {participant.name || 'Unknown User'}
+                            {participant.userId === currentUserId && ' (You)'}
+                          </span>
+                          {participant.email && (
+                            <span className="text-muted-foreground text-xs">
+                              {participant.email}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isLoadingParticipants ? (
+                <p className="text-muted-foreground text-xs">Loading participants...</p>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  {focusParticipant
+                    ? 'The AI will focus on content relevant to the selected participant.'
+                    : 'No focus selected. The AI will analyze content from all participants equally.'}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">

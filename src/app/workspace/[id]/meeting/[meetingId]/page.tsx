@@ -119,6 +119,7 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
             meetingId={params.meetingId}
             canEdit={canEdit}
             initialOutcomes={outcomes}
+            currentUserId={userId}
           />
         </div>
 

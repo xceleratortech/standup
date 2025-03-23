@@ -185,10 +185,12 @@ export function useGenerateOutcome(meetingId: string) {
     mutationFn: ({
       outcomeType,
       additionalPrompt,
+      focusParticipantId,
     }: {
       outcomeType: 'summary' | 'actions';
       additionalPrompt?: string;
-    }) => generateMeetingOutcome({ meetingId, outcomeType, additionalPrompt }),
+      focusParticipantId?: string;
+    }) => generateMeetingOutcome({ meetingId, outcomeType, additionalPrompt, focusParticipantId }),
     onSuccess: (newOutcome: any) => {
       toast.success(`${newOutcome.type} generated successfully`);
 

@@ -196,19 +196,47 @@ export async function getTranscriptionFromAudioFile(
   }
 }
 
+const outcomePromptsMap = {
+  summary: `Summary must not just quote the transcript (unless it makes sense) but provide a concise overview of the main points discussed.`,
+  actions: `Action items are tasks or follow-up actions that need to be taken based on the discussion in the transcript. They should be clear, actionable, and ideally assigned to specific individuals or teams. Each action item should include a brief description of the task, the person responsible for it, and any relevant deadlines or context.
+if the action items are not requested for a specific person, group them by the person who was tasked for it.
+To refer or tag a specific person link their Name to their email.`,
+};
+
 export async function generateOutcome(
   transcripts: string[],
   outcomeType: 'summary' | 'actions',
-  additionalPrompt?: string
+  additionalPrompt?: string,
+  focusParticipant?: { id: string; name: string; email: string } | null
 ) {
   try {
-    const prompt = `You are an AI assistant tasked with generating ${outcomeType} from a list of transcripts.
-      ${additionalPrompt ? additionalPrompt + '\n' : ''}
-      Please provide the ${outcomeType} in markdown format.`;
+    // Build focus instructions if a participant is specified
+    let focusInstructions = '';
+    if (focusParticipant) {
+      focusInstructions = `
+Focus specifically on content relevant to ${focusParticipant.name} (${focusParticipant.email}).
+For summaries: Highlight discussions where they were involved, decisions that affect them, and any feedback they provided.
+For action items: Emphasize tasks assigned to them or that require their input.
+`;
+    }
+
+    const prompt = `You are an AI assistant tasked with generating:
+
+${outcomeType} from the list of transcripts.
+
+${outcomePromptsMap[outcomeType]}
+
+${focusInstructions}
+
+Here are the transcripts:
+${transcripts.join('\n\n')}
+
+${additionalPrompt ? additionalPrompt + '\n' : ''}
+Please provide the ${outcomeType} in markdown format.`;
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
-    const content = [prompt, ...transcripts];
+    const content = [prompt];
     const result = await model.generateContent(content);
     const text = result.response.text();
     console.log(`Generated ${outcomeType}:`, text);

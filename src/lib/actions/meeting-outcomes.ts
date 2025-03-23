@@ -13,6 +13,7 @@ import {
 import { eq, and, isNotNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { generateOutcome } from './ai/generate';
+import { user } from '../db/auth-schema';
 
 // Create a meeting outcome
 export async function createMeetingOutcome({
@@ -284,10 +285,12 @@ export async function generateMeetingOutcome({
   meetingId,
   outcomeType,
   additionalPrompt,
+  focusParticipantId,
 }: {
   meetingId: string;
   outcomeType: 'summary' | 'actions';
   additionalPrompt?: string;
+  focusParticipantId?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -350,8 +353,37 @@ export async function generateMeetingOutcome({
   // Extract transcriptions
   const transcripts = recordings.map((recording) => recording.transcription as string);
 
+  // Get focus participant details if provided
+  let focusParticipantInfo = null;
+  if (focusParticipantId) {
+    const participant = await db
+      .select({
+        id: meetingParticipant.userId,
+        name: user.name,
+        email: user.email,
+      })
+      .from(meetingParticipant)
+      .innerJoin(user, eq(meetingParticipant.userId, user.id))
+      .where(
+        and(
+          eq(meetingParticipant.meetingId, meetingId),
+          eq(meetingParticipant.userId, focusParticipantId)
+        )
+      )
+      .limit(1);
+
+    if (participant.length > 0) {
+      focusParticipantInfo = participant[0];
+    }
+  }
+
   // Generate content using AI
-  const content = await generateOutcome(transcripts, outcomeType, additionalPrompt);
+  const content = await generateOutcome(
+    transcripts,
+    outcomeType,
+    additionalPrompt,
+    focusParticipantInfo
+  );
 
   // Create the outcome
   const [outcome] = await db
@@ -361,6 +393,7 @@ export async function generateMeetingOutcome({
       type: outcomeType === 'summary' ? 'Summary' : 'Action Items',
       content,
       createdById: userId,
+      meta: focusParticipantId ? JSON.stringify({ focusParticipantId }) : null,
     })
     .returning();
 
