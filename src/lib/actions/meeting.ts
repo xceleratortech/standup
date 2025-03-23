@@ -3,9 +3,17 @@
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { meeting, workspaceUser } from '@/lib/db/schema';
+import {
+  meeting,
+  workspaceUser,
+  meetingRecording,
+  meetingOutcome,
+  meetingParticipant,
+} from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { s3Client, S3_BUCKET } from '@/lib/s3';
+import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 // Create a new meeting
 export async function createMeeting({
@@ -235,9 +243,57 @@ export async function deleteMeeting(meetingId: string) {
     throw new Error("You don't have permission to delete this meeting");
   }
 
-  // Delete the meeting
-  await db.delete(meeting).where(eq(meeting.id, meetingId));
+  try {
+    // Get all recordings associated with this meeting
+    const recordings = await db.query.meetingRecording.findMany({
+      where: eq(meetingRecording.meetingId, meetingId),
+    });
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings`);
-  return { success: true };
+    // Delete all recordings files from S3
+    if (recordings.length > 0) {
+      // First, list all files in the meeting directory
+      const prefix = `recordings/${meetingData.workspaceId}/${meetingId}/`;
+
+      const listCommand = new ListObjectsV2Command({
+        Bucket: S3_BUCKET,
+        Prefix: prefix,
+      });
+
+      const { Contents } = await s3Client.send(listCommand);
+
+      if (Contents && Contents.length > 0) {
+        // Delete all objects found in the meeting directory
+        const deleteCommand = new DeleteObjectsCommand({
+          Bucket: S3_BUCKET,
+          Delete: {
+            Objects: Contents.map((item) => ({ Key: item.Key! })),
+            Quiet: false,
+          },
+        });
+
+        await s3Client.send(deleteCommand);
+      }
+    }
+
+    // Delete meeting and all associated data
+    await db.transaction(async (tx) => {
+      // Delete outcomes
+      await tx.delete(meetingOutcome).where(eq(meetingOutcome.meetingId, meetingId));
+
+      // Delete participants
+      await tx.delete(meetingParticipant).where(eq(meetingParticipant.meetingId, meetingId));
+
+      // Delete recordings from database
+      await tx.delete(meetingRecording).where(eq(meetingRecording.meetingId, meetingId));
+
+      // Delete the meeting itself
+      await tx.delete(meeting).where(eq(meeting.id, meetingId));
+    });
+
+    revalidatePath('/workspace');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting meeting:', error);
+    throw error;
+  }
 }

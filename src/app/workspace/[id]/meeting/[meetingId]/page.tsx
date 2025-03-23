@@ -6,18 +6,19 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { Spinner } from '@/components/ui/spinner';
 import { db } from '@/lib/db';
-import { getMeeting } from '@/lib/actions/meeting';
+import { getMeeting, deleteMeeting } from '@/lib/actions/meeting';
 import { getMeetingParticipants } from '@/lib/actions/meeting-participants';
 import { getMeetingOutcomes } from '@/lib/actions/meeting-outcomes';
 import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import WorkspaceNav from '@/components/workspace-nav';
-import { Calendar, Clock, Edit } from 'lucide-react';
+import { Calendar, Clock, Edit, Trash2 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { RecordingList } from '@/components/meetings/recording-list';
 import MeetingOutcomes from '@/components/meetings/meeting-outcomes';
 import MeetingParticipants from '@/components/meetings/meeting-participants';
 import { EditMeetingDialog } from '@/components/meetings/edit-meeting-dialog';
+import { DeleteMeetingDialog } from '@/components/meetings/delete-meeting-dialog';
 
 function LoadingMeeting() {
   return (
@@ -96,11 +97,14 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
           </div>
 
           {canEdit && (
-            <EditMeetingDialog
-              meetingId={params.meetingId}
-              initialTitle={meeting.title}
-              initialDescription={meeting.description}
-            />
+            <div className="flex items-center gap-2">
+              <EditMeetingDialog
+                meetingId={params.meetingId}
+                initialTitle={meeting.title}
+                initialDescription={meeting.description}
+              />
+              <DeleteMeetingDialog meetingId={params.meetingId} workspaceId={params.id} />
+            </div>
           )}
         </div>
 

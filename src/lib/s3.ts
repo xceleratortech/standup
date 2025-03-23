@@ -1,4 +1,11 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Initialize S3 client
@@ -43,4 +50,40 @@ export function generateFileKey(workspaceId: string, meetingId: string, fileName
   const timestamp = Date.now();
   const extension = fileName.split('.').pop();
   return `recordings/${workspaceId}/${meetingId}/${timestamp}.${extension}`;
+}
+
+// Add function to delete a single file from S3
+export async function deleteFile(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: key,
+  });
+
+  return s3Client.send(command);
+}
+
+// Add function to delete multiple files from S3
+export async function deleteFiles(keys: string[]) {
+  if (keys.length === 0) return;
+
+  const command = new DeleteObjectsCommand({
+    Bucket: S3_BUCKET,
+    Delete: {
+      Objects: keys.map((key) => ({ Key: key })),
+      Quiet: false,
+    },
+  });
+
+  return s3Client.send(command);
+}
+
+// Add function to list files with a specific prefix
+export async function listFiles(prefix: string) {
+  const command = new ListObjectsV2Command({
+    Bucket: S3_BUCKET,
+    Prefix: prefix,
+  });
+
+  const response = await s3Client.send(command);
+  return response.Contents || [];
 }

@@ -415,9 +415,9 @@ export async function getVoiceIdentityUploadUrl({
     throw new Error("Workspace not found or you don't have access");
   }
 
-  // Generate a unique file key
-  const fileId = uuidv4();
-  const fileKey = `voice-identities/${workspaceId}/${userId}/${fileId}/${fileName}`;
+  // Create a consistent file key using workspaceId and userId - this ensures
+  // that subsequent uploads will overwrite the previous voice sample
+  const fileKey = `voice-identities/${workspaceId}/${userId}/voice-sample.mp3`;
 
   // Create a presigned URL for uploading using the centralized S3 module
   const uploadUrl = await generateUploadUrl(fileKey, contentType);
