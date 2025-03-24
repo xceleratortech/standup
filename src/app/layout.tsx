@@ -33,7 +33,7 @@ export default function RootLayout({
         <Providers>
           <DraftRecordingsProvider>
             {children}
-            <Toaster position="top-right" />
+            <Toaster position="bottom-center" />
           </DraftRecordingsProvider>
         </Providers>
       </body>

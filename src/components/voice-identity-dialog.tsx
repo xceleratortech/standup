@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from '@/lib/auth-client';
+import { getVoiceSampleText } from '@/lib/config/voice-samples';
 
 type User = InferSelectModel<typeof user>;
 
@@ -89,6 +90,10 @@ export default function VoiceIdentityDialog({
   const [deleteAllSamples, setDeleteAllSamples] = useState(false);
   const [voiceSamples, setVoiceSamples] = useState<VoiceSample[]>([]);
   const [maxRecordingReached, setMaxRecordingReached] = useState(false);
+  const [currentSampleText, setCurrentSampleText] = useState<{
+    title: string;
+    text: string;
+  } | null>(null);
 
   const { data: session } = useSession();
 
@@ -140,9 +145,17 @@ export default function VoiceIdentityDialog({
         samples.forEach((sample) => {
           fetchAudioUrl(sample.id, sample.fileKey);
         });
+
+        // Set the appropriate sample text based on the next sample number
+        const nextSampleNumber = samples.length + 1;
+        if (nextSampleNumber <= 3) {
+          setCurrentSampleText(getVoiceSampleText(nextSampleNumber));
+        }
       } else {
         setVoiceSamples([]);
         setMaxRecordingReached(false);
+        // Set the first sample text
+        setCurrentSampleText(getVoiceSampleText(1));
       }
 
       setRecordingName(`Voice of ${session?.user.name || 'Me'}`);
@@ -218,6 +231,13 @@ export default function VoiceIdentityDialog({
       // Set new recording mode to true
       setIsNewRecordingMode(true);
 
+      // Set the sample text for this recording
+      const sampleNumber = voiceSamples.length + 1;
+      if (sampleNumber <= 3) {
+        setCurrentSampleText(getVoiceSampleText(sampleNumber));
+        setRecordingName(`Sample ${sampleNumber}: ${getVoiceSampleText(sampleNumber).title}`);
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
 
@@ -240,16 +260,16 @@ export default function VoiceIdentityDialog({
         }
       };
 
-      mediaRecorder.start();
+      // Start in paused state instead of recording immediately
       setIsRecording(true);
-      startTimer();
+      setIsPaused(true);
+      mediaRecorderRef.current.start();
 
-      // Start visualizing audio levels
-      animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+      // We don't start the timer here, it will be started when user clicks resume
 
-      toast.success('Recording started');
+      toast.success('Ready to record. Click the microphone button to start');
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Error initializing recording:', error);
       toast.error('Failed to start recording', {
         description: 'Please check your microphone permissions.',
       });
@@ -261,27 +281,44 @@ export default function VoiceIdentityDialog({
 
     mediaRecorderRef.current.pause();
     setIsPaused(true);
+
+    // Make sure we stop the timer
     stopTimer();
 
     // Stop visualizing audio levels
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
 
     toast('Recording paused');
   };
 
   const resumeRecording = () => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'paused') return;
+    if (!mediaRecorderRef.current) return;
 
-    mediaRecorderRef.current.resume();
-    setIsPaused(false);
-    startTimer();
+    try {
+      // Only resume if we're in paused state
+      if (mediaRecorderRef.current.state === 'paused') {
+        mediaRecorderRef.current.resume();
+      }
 
-    // Resume visualizing audio levels
-    animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+      setIsPaused(false);
 
-    toast('Recording resumed');
+      // Make sure any existing timer is cleared before starting a new one
+      stopTimer();
+      startTimer();
+
+      // Resume visualizing audio levels
+      if (!animationFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+      }
+
+      toast('Recording resumed');
+    } catch (error) {
+      console.error('Error resuming recording:', error);
+      toast.error('Failed to resume recording');
+    }
   };
 
   const stopRecording = async () => {
@@ -524,7 +561,7 @@ export default function VoiceIdentityDialog({
             <DialogDescription>
               {hasVoiceIdentity
                 ? 'Your voice samples help identify you in meeting transcripts. You can have up to 3 samples (max 1 minute each).'
-                : 'Record up to 3 voice samples (max 1 minute each) to help identify you in meeting transcripts.'}
+                : 'Record up to 3 voice samples to help identify you in meeting transcripts. Each sample has different text to help improve recognition.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -540,6 +577,32 @@ export default function VoiceIdentityDialog({
                   </p>
                 </div>
               )}
+
+            {/* Sample text to read for recording */}
+            {currentSampleText && (isRecording || (!isRecording && !hasVoiceIdentity)) && (
+              <Card className="bg-muted/50 gap-2">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">
+                    {isRecording ? 'Please read the following text:' : 'You will be asked to read:'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">
+                    {isRecording && (
+                      <span className="text-primary text-lg font-medium">
+                        "{currentSampleText.text}"
+                      </span>
+                    )}
+                    {!isRecording && (
+                      <span className="text-muted-foreground italic">
+                        A short passage with common meeting phrases. Press record when ready and
+                        stop when you've finished reading.
+                      </span>
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Voice Sample Cards */}
             {!isRecording && voiceSamples.length > 0 && (
@@ -609,7 +672,7 @@ export default function VoiceIdentityDialog({
                     <motion.div
                       className="bg-primary/80 mx-auto h-16 w-1/2 rounded-lg"
                       style={{
-                        scaleY: audioLevel * 3,
+                        scaleY: isPaused ? 0.05 : audioLevel * 3,
                         originY: 1,
                       }}
                       transition={{
@@ -626,10 +689,12 @@ export default function VoiceIdentityDialog({
                   <p className="font-mono text-2xl font-medium">{formatTime(recordingTime)}</p>
                   <p className="text-muted-foreground text-sm">
                     {isPaused
-                      ? 'Recording paused'
+                      ? recordingTime > 0
+                        ? 'Recording paused'
+                        : 'Ready to record - read the text above, then press the microphone button to start'
                       : recordingTime >= 60
                         ? 'Maximum duration reached (1 minute)'
-                        : 'Recording...'}
+                        : 'Recording... Press pause when you finish reading'}
                   </p>
                 </div>
 
@@ -725,19 +790,25 @@ export default function VoiceIdentityDialog({
                   {isUploading ? 'Uploading...' : 'Save Voice Sample'}
                 </Button>
               ) : (
-                !isRecording && (
+                !isRecording &&
+                // Use PulseButton if user has fewer than 3 samples and isn't at max
+                (voiceSamples.length < 3 ? (
                   <Button
                     onClick={handleStartNewRecording}
-                    disabled={
-                      isUploading ||
-                      (voiceSamples.length >= 3 &&
-                        !voiceSamples.some((s) => s.id === 'temp-recording'))
-                    }
+                    disabled={isUploading}
+                    className="relative animate-pulse"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    {voiceSamples.length > 0 ? 'Add Another Sample' : 'Record Sample'}
+                    {voiceSamples.length > 0
+                      ? `Record Sample ${voiceSamples.length + 1}`
+                      : 'Record Sample 1'}
                   </Button>
-                )
+                ) : (
+                  <Button onClick={handleStartNewRecording} disabled={true}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Record Sample (Max Reached)
+                  </Button>
+                ))
               )}
             </div>
           </DialogFooter>

@@ -55,6 +55,9 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
     creator: ws.workspace.creator?.name || 'Unknown',
   }));
 
+  // Determine if we need to draw attention to the voice ID button
+  const needsMoreVoiceSamples = !voiceIdentities || voiceIdentities.length < 3;
+
   return (
     <div className="flex w-full items-center justify-center p-2 md:p-0">
       <div className="container mx-auto flex max-w-screen-2xl items-center justify-between">
@@ -109,20 +112,23 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
         <div className="flex items-center gap-2">
           {/* Desktop controls */}
           <div className="hidden items-center gap-2 md:flex">
-            <VoiceIdentityDialog
-              workspaceId={workspaceId}
-              hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
-              voiceIdentities={voiceIdentities}
-              buttonLabel={
-                <>
-                  <Mic className="h-4 w-4" />
-                  {voiceIdentities && voiceIdentities.length > 0
-                    ? `Voice Samples (${voiceIdentities.length})`
-                    : 'Set Up Voice ID'}
-                </>
-              }
-              buttonVariant="outline"
-            />
+            <div className="relative">
+              <VoiceIdentityDialog
+                workspaceId={workspaceId}
+                hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
+                voiceIdentities={voiceIdentities}
+                buttonLabel={
+                  <>
+                    <Mic className="h-4 w-4" />
+                    {voiceIdentities && voiceIdentities.length > 0
+                      ? `Voice Samples (${voiceIdentities.length}/3)`
+                      : 'Set Up Voice ID'}
+                  </>
+                }
+                buttonVariant="outline"
+                buttonClassName={`${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
+              />
+            </div>
             <UserProfileMenu user={session?.user} />
           </div>
 
@@ -187,22 +193,24 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                         }
                       />
 
-                      <VoiceIdentityDialog
-                        workspaceId={workspaceId}
-                        hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
-                        voiceIdentities={voiceIdentities}
-                        className="w-full"
-                        buttonVariant="outline"
-                        buttonClassName="w-full justify-start"
-                        buttonLabel={
-                          <>
-                            <Mic className="mr-2 h-4 w-4" />
-                            {voiceIdentities && voiceIdentities.length > 0
-                              ? `Voice Samples (${voiceIdentities.length})`
-                              : 'Set Up Voice ID'}
-                          </>
-                        }
-                      />
+                      <div className="relative w-full">
+                        <VoiceIdentityDialog
+                          workspaceId={workspaceId}
+                          hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
+                          voiceIdentities={voiceIdentities}
+                          className="w-full"
+                          buttonVariant="outline"
+                          buttonClassName={`w-full justify-start ${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
+                          buttonLabel={
+                            <>
+                              <Mic className="mr-2 h-4 w-4" />
+                              {voiceIdentities && voiceIdentities.length > 0
+                                ? `Voice Samples (${voiceIdentities.length}/3)`
+                                : 'Set Up Voice ID'}
+                            </>
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

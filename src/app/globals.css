@@ -121,6 +121,26 @@
   }
 }
 
+/* Pulsing animation for voice ID button */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 10px 5px rgba(59, 130, 246, 0.3);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    transform: scale(1);
+  }
+}
+
+.voice-attention {
+  animation: pulse 2s infinite ease-in-out;
+}
+
 .mask-fade {
   mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);

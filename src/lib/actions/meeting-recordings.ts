@@ -25,6 +25,7 @@ import {
   identifyParticipantsFromAudio,
 } from '@/lib/actions/ai/generate';
 import { user } from '../db/auth-schema';
+import { voiceSampleTexts } from '../config/voice-samples';
 
 // Get a signed URL for uploading a recording
 export async function getRecordingUploadUrl({
@@ -894,11 +895,16 @@ Your goal is to return a list of emails ONLY for those people whose voices are h
     }
   }
 
-  // Add final instructions
   contentItems.push({
     type: 'prompt',
     content: `
-Now I'll provide the meeting recording. Please listen carefully and return ONLY an array of email addresses for people who actually spoke during this meeting.
+The above voice samples were more or less trying to say the following:
+${voiceSampleTexts.join('\n')}
+
+Now that you know what the samples sound like and what they transcribe to, this should help you better identify them and what they say in the meeting recording.
+This could be their accent or the way they pronounce certain words.
+
+Now I'll provide the meeting recording below. Please listen carefully and return ONLY an array of email addresses for people who actually spoke during this meeting.
 If someone's voice from the samples above is heard in the meeting, include their email in the response.
 If a voice in the meeting doesn't match any of the provided samples, don't include them.
 Format the output as a JSON array of email strings.`,
