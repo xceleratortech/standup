@@ -621,6 +621,7 @@ export async function generateMissingTranscriptions(
         .set({
           transcription,
           updatedAt: new Date(),
+          transcriptionGeneratedAt: new Date(), // Set the generation timestamp
         })
         .where(eq(meetingRecording.id, recording.id));
 
@@ -694,6 +695,7 @@ export async function regenerateRecordingTranscription(recordingId: string) {
       .set({
         transcription,
         updatedAt: new Date(),
+        transcriptionGeneratedAt: new Date(), // Set the generation timestamp
       })
       .where(eq(meetingRecording.id, recordingData.id));
 

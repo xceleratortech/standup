@@ -1,0 +1,1 @@
+ALTER TABLE "meeting_recording" ADD COLUMN "transcription_generated_at" timestamp;

@@ -61,6 +61,7 @@ interface Recording {
   createdById: string;
   updatedAt?: Date;
   transcription?: string | null;
+  transcriptionGeneratedAt?: Date | null; // Add this field
 }
 
 interface RecordingListProps {
@@ -650,6 +651,17 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                             </TabsContent>
 
                             <TabsContent value="transcript" className="mt-0">
+                              {recording.transcriptionGeneratedAt && (
+                                <div className="text-muted-foreground mb-2 text-xs">
+                                  Transcript generated{' '}
+                                  {formatDistanceToNow(
+                                    new Date(recording.transcriptionGeneratedAt),
+                                    {
+                                      addSuffix: true,
+                                    }
+                                  )}
+                                </div>
+                              )}
                               <RecordingTranscript
                                 meetingId={meetingId}
                                 transcription={recording.transcription}
