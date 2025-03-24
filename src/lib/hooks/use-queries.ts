@@ -4,6 +4,7 @@ import {
   getRecordingDownloadUrl,
   deleteRecording,
   generateMissingTranscriptions,
+  regenerateRecordingTranscription,
 } from '@/lib/actions/meeting-recordings';
 import {
   getMeetingOutcomes,
@@ -341,7 +342,8 @@ export function useGenerateTranscriptions(meetingId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => generateMissingTranscriptions(meetingId),
+    mutationFn: (forceRegenerate: boolean = false) =>
+      generateMissingTranscriptions(meetingId, forceRegenerate),
     onSuccess: (result) => {
       if (result.updated > 0) {
         toast.success(`Generated ${result.updated} transcriptions`);
@@ -359,8 +361,34 @@ export function useGenerateTranscriptions(meetingId: string) {
   });
 }
 
+// New hook for regenerating a single recording transcript
+export function useRegenerateRecordingTranscription(meetingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (recordingId: string) => regenerateRecordingTranscription(recordingId),
+    onSuccess: (result) => {
+      toast.success('Transcription regenerated successfully');
+
+      // First, get the recording to find its meetingId
+      if (result && result.recordingId) {
+        // Instead of just invalidating all recordings, we can be more specific
+        // This will force a refetch of the recordings for the specific meeting
+        queryClient.invalidateQueries({
+          queryKey: ['recordings', meetingId], // This covers all recordings queries
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Failed to regenerate transcription:', error);
+      toast.error('Failed to regenerate transcription');
+    },
+  });
+}
+
 // Add a function to be used by other mutations to trigger transcription generation
-export function triggerTranscriptionGeneration(meetingId: string, queryClient: any) {
+export function triggerTranscriptionGeneration(meetingId: string) {
+  const queryClient = useQueryClient();
   // Call the server action directly
   generateMissingTranscriptions(meetingId)
     .then((result) => {

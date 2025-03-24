@@ -420,8 +420,8 @@ export async function updateRecordingTranscription({
   return { success: true };
 }
 
-// Generate transcriptions for all recordings in a meeting that don't have them
-export async function generateMissingTranscriptions(meetingId: string) {
+// Helper function to get meeting data and validate user access
+async function getMeetingAndValidateAccess(meetingId: string) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -453,16 +453,11 @@ export async function generateMissingTranscriptions(meetingId: string) {
     throw new Error("You don't have access to this meeting");
   }
 
-  // Get all recordings for this meeting that don't have transcriptions
-  const recordings = await db
-    .select()
-    .from(meetingRecording)
-    .where(and(eq(meetingRecording.meetingId, meetingId), isNull(meetingRecording.transcription)));
+  return { meetingData, userId, userWorkspace };
+}
 
-  if (recordings.length === 0) {
-    return { message: 'No recordings need transcription', updated: 0 };
-  }
-
+// Helper function to get participants with voice samples
+async function getParticipantsWithVoiceSamples(meetingId: string, workspaceId: string) {
   // Get meeting participants with their user information
   const participants = await db
     .select({
@@ -485,7 +480,7 @@ export async function generateMissingTranscriptions(meetingId: string) {
     .from(userVoiceIdentity)
     .where(
       and(
-        eq(userVoiceIdentity.workspaceId, meetingData.workspaceId),
+        eq(userVoiceIdentity.workspaceId, workspaceId),
         inArray(userVoiceIdentity.userId, participantIds)
       )
     );
@@ -518,46 +513,48 @@ export async function generateMissingTranscriptions(meetingId: string) {
     })
     .filter((p) => p.voiceSamples.length > 0);
 
-  // Process each recording
-  const results = [];
-  for (const recording of recordings) {
-    try {
-      // Create an array of content items with alternating voice samples and prompts
-      const contentItems = [];
+  return participantsWithVoices;
+}
 
-      // Add intro prompt
+// Helper function to create content items for transcription
+function createTranscriptionContentItems(participantsWithVoices: any[], recordingFileKey: string) {
+  const contentItems = [];
+
+  // Add intro prompt
+  contentItems.push({
+    type: 'prompt' as const,
+    content: `I'll provide voice samples of meeting participants followed by the meeting recording that needs transcription.
+Please use these voice samples to accurately identify speakers in the meeting recording.
+DO NOT INCLUDE THESE IN THE TRANSCRIPTION.`,
+  });
+
+  // Add voice samples with their identifying information
+  if (participantsWithVoices.length > 0) {
+    for (const participant of participantsWithVoices) {
+      // Add each voice sample for this participant
       contentItems.push({
         type: 'prompt' as const,
-        content: `I'll provide voice samples of meeting participants followed by the meeting recording that needs transcription. Please use these voice samples to accurately identify speakers in the meeting recording.`,
+        content: `Below are Voice samples for ${participant.name} (${participant.email}):`,
       });
-
-      // Add voice samples with their identifying information
-      if (participantsWithVoices.length > 0) {
-        for (const participant of participantsWithVoices) {
-          // Add each voice sample for this participant
-          contentItems.push({
-            type: 'prompt' as const,
-            content: `Below are Voice samples for ${participant.name} (${participant.email}):`,
-          });
-          for (const sample of participant.voiceSamples) {
-            // Add the voice sample file
-            contentItems.push({
-              type: 'audiofile' as const,
-              content: sample.fileKey,
-            });
-          }
-          // Add prompt identifying this voice
-          contentItems.push({
-            type: 'prompt' as const,
-            content: `The voice samples above belong to: ${participant.name} (${participant.email})`,
-          });
-        }
+      for (const sample of participant.voiceSamples) {
+        // Add the voice sample file
+        contentItems.push({
+          type: 'audiofile' as const,
+          content: sample.fileKey,
+        });
       }
-
-      // Add final instructions
+      // Add prompt identifying this voice
       contentItems.push({
         type: 'prompt' as const,
-        content: `
+        content: `The voice samples above belong to: ${participant.name} (${participant.email})`,
+      });
+    }
+  }
+
+  // Add final instructions
+  contentItems.push({
+    type: 'prompt' as const,
+    content: `
 The above voice samples are from meeting participants, to help you identify them in the recording.
 
 DO NOT INCLUDE THE VOICE SAMPLES ABOVE IN THE TRANSCRIPTION.
@@ -567,16 +564,57 @@ Include voice inflections, timestamps, and speaker identification.
 When you identify a speaker from the provided samples, use their email in the 'speaker' field.
 If you can't identify who is speaking, use labels like "Person 1", "Person 2", etc. or even their name if they identify themself in the meeting, but always include a speaker field.
 Format the output as a JSON schema.`,
-      });
-      // Add the main recording file
-      contentItems.push({
-        type: 'audiofile' as const,
-        content: recording.fileKey,
-      });
+  });
+
+  // Add the main recording file
+  contentItems.push({
+    type: 'audiofile' as const,
+    content: recordingFileKey,
+  });
+
+  return contentItems;
+}
+
+// Generate transcriptions for all recordings in a meeting that don't have them
+export async function generateMissingTranscriptions(
+  meetingId: string,
+  forceRegenerate: boolean = false
+) {
+  const { meetingData, userId } = await getMeetingAndValidateAccess(meetingId);
+
+  // Get recordings for this meeting based on the forceRegenerate flag
+  const recordings = forceRegenerate
+    ? await db.select().from(meetingRecording).where(eq(meetingRecording.meetingId, meetingId))
+    : await db
+        .select()
+        .from(meetingRecording)
+        .where(
+          and(eq(meetingRecording.meetingId, meetingId), isNull(meetingRecording.transcription))
+        );
+
+  if (recordings.length === 0) {
+    return { message: 'No recordings need transcription', updated: 0 };
+  }
+
+  // Get participants with voice samples
+  const participantsWithVoices = await getParticipantsWithVoiceSamples(
+    meetingId,
+    meetingData.workspaceId
+  );
+
+  // Process each recording
+  const results = [];
+  for (const recording of recordings) {
+    try {
+      // Create content items for transcription
+      const contentItems = createTranscriptionContentItems(
+        participantsWithVoices,
+        recording.fileKey
+      );
 
       // Generate transcription with the ordered content items
       const transcription = await getTranscriptionFromAudioFile(contentItems);
-      console.log('Transcription:', transcription);
+
       // Update the recording with the transcription
       await db
         .update(meetingRecording)
@@ -608,4 +646,61 @@ Format the output as a JSON schema.`,
     updated: results.filter((r) => r.status === 'success').length,
     results,
   };
+}
+
+// New function to regenerate transcript for a specific recording
+export async function regenerateRecordingTranscription(recordingId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  // Get the recording
+  const recordingData = await db.query.meetingRecording.findFirst({
+    where: eq(meetingRecording.id, recordingId),
+  });
+
+  if (!recordingData) {
+    throw new Error('Recording not found');
+  }
+
+  // Get the meeting and validate access
+  const { meetingData } = await getMeetingAndValidateAccess(recordingData.meetingId);
+
+  // Get participants with voice samples
+  const participantsWithVoices = await getParticipantsWithVoiceSamples(
+    recordingData.meetingId,
+    meetingData.workspaceId
+  );
+
+  try {
+    // Create content items for transcription
+    const contentItems = createTranscriptionContentItems(
+      participantsWithVoices,
+      recordingData.fileKey
+    );
+
+    // Generate transcription with the ordered content items
+    const transcription = await getTranscriptionFromAudioFile(contentItems);
+
+    // Update the recording with the transcription
+    await db
+      .update(meetingRecording)
+      .set({
+        transcription,
+        updatedAt: new Date(),
+      })
+      .where(eq(meetingRecording.id, recordingData.id));
+
+    revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${recordingData.meetingId}`);
+    return { success: true, recordingId: recordingData.id };
+  } catch (error: any) {
+    console.error(`Error regenerating transcription for recording ${recordingData.id}:`, error);
+    throw new Error(`Failed to regenerate transcription: ${error.message}`);
+  }
 }

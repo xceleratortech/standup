@@ -12,6 +12,7 @@ import {
   Play,
   Pause,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -35,10 +36,18 @@ import {
   useDeleteRecording,
   useRecordingDownloadUrl,
   useGenerateTranscriptions,
+  useRegenerateRecordingTranscription,
 } from '@/lib/hooks/use-queries';
 import RecordingTranscript from './recording-transcript';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Recording {
   id: string;
@@ -66,6 +75,13 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   const deleteRecordingMutation = useDeleteRecording();
   const { mutate: generateTranscriptions, isPending: isGeneratingTranscriptions } =
     useGenerateTranscriptions(meetingId);
+  const { mutate: regenerateTranscription, isPending: isRegeneratingTranscription } =
+    useRegenerateRecordingTranscription(meetingId);
+
+  // Sort recordings by creation date (newest first)
+  const sortedRecordings = [...recordings].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const [playing, setPlaying] = useState<string | null>(null);
   const [recordingURLs, setRecordingURLs] = useState<Record<string, string>>({});
@@ -75,6 +91,8 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPlaybackTimes, setCurrentPlaybackTimes] = useState<Record<string, number>>({});
   const [loadingRecordings, setLoadingRecordings] = useState<Record<string, boolean>>({});
+  const [regeneratingIds, setRegeneratingIds] = useState<Record<string, boolean>>({});
+  const [regenerateAllDialogOpen, setRegenerateAllDialogOpen] = useState(false);
 
   // Add an effect to refresh recordings when the component mounts or when recordings change
   useEffect(() => {
@@ -82,7 +100,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
     queryClient.invalidateQueries({ queryKey: ['recordings', meetingId] });
 
     // Check for recordings without transcriptions and generate them
-    generateTranscriptions();
+    generateTranscriptions(false);
   }, [queryClient, meetingId, generateTranscriptions, recordings.length]);
 
   // Handler for audio time updates
@@ -368,13 +386,101 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
     }
   }
 
+  // Handle regenerating transcription for a single recording
+  const handleRegenerateTranscription = (e: React.MouseEvent, recordingId: string) => {
+    e.stopPropagation();
+
+    // Set loading state for this recording
+    setRegeneratingIds((prev) => ({
+      ...prev,
+      [recordingId]: true,
+    }));
+
+    // Call the mutation
+    regenerateTranscription(recordingId, {
+      onSuccess: () => {
+        setRegeneratingIds((prev) => ({
+          ...prev,
+          [recordingId]: false,
+        }));
+
+        // Make sure this recording is expanded and showing the transcript tab
+        setExpandedRecordings((prev) => ({
+          ...prev,
+          [recordingId]: true,
+        }));
+        setActiveTab((prev) => ({
+          ...prev,
+          [recordingId]: 'transcript',
+        }));
+      },
+      onError: () => {
+        setRegeneratingIds((prev) => ({
+          ...prev,
+          [recordingId]: false,
+        }));
+      },
+    });
+  };
+
+  // Handle regenerating all transcriptions
+  const handleRegenerateAllTranscriptions = () => {
+    setRegenerateAllDialogOpen(false);
+
+    // Call generate with force flag set to true
+    generateTranscriptions(true);
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FilePlus className="h-5 w-5" />
-          Recordings
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <FilePlus className="h-5 w-5" />
+            Recordings
+          </CardTitle>
+
+          {canEdit && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingTranscriptions || recordings.length === 0}
+                >
+                  {isGeneratingTranscriptions ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Transcripts
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => generateTranscriptions(false)}
+                  disabled={isGeneratingTranscriptions}
+                >
+                  Generate missing transcripts
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setRegenerateAllDialogOpen(true)}
+                  disabled={isGeneratingTranscriptions}
+                  className="text-orange-600 focus:text-orange-600"
+                >
+                  Regenerate all transcripts
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
         <CardDescription>
           Audio recordings associated with this meeting
           {isGeneratingTranscriptions && (
@@ -391,13 +497,13 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        ) : recordings.length === 0 ? (
+        ) : sortedRecordings.length === 0 ? (
           <Alert>
             <AlertDescription>No recordings have been added to this meeting yet.</AlertDescription>
           </Alert>
         ) : (
           <div className="space-y-3">
-            {recordings.map((recording) => (
+            {sortedRecordings.map((recording) => (
               <div key={recording.id} className="flex flex-col">
                 {/* Clickable header */}
                 <div
@@ -444,19 +550,39 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                       size="icon"
                       onClick={(e) => handleDownload(e, recording.id)}
                       className="h-8 w-8"
+                      title="Download recording"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
 
                     {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => confirmDelete(e, recording.id)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="text-destructive h-4 w-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleRegenerateTranscription(e, recording.id)}
+                          className="h-8 w-8"
+                          disabled={regeneratingIds[recording.id]}
+                          title="Regenerate transcript"
+                        >
+                          <RefreshCw
+                            className={cn(
+                              'h-4 w-4',
+                              regeneratingIds[recording.id] && 'animate-spin'
+                            )}
+                          />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => confirmDelete(e, recording.id)}
+                          className="h-8 w-8"
+                          title="Delete recording"
+                        >
+                          <Trash2 className="text-destructive h-4 w-4" />
+                        </Button>
+                      </>
                     )}
 
                     <Button
@@ -582,6 +708,32 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Regenerate all transcripts confirmation dialog */}
+      <AlertDialog
+        open={regenerateAllDialogOpen}
+        onOpenChange={(open) => setRegenerateAllDialogOpen(open)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate All Transcripts</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will regenerate transcripts for all recordings in this meeting. This process
+              might take a while depending on the number and size of recordings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isGeneratingTranscriptions}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRegenerateAllTranscriptions}
+              disabled={isGeneratingTranscriptions}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              {isGeneratingTranscriptions ? 'Processing...' : 'Regenerate All'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
