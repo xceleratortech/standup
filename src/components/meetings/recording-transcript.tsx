@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
+import { Play, Pencil } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscriptSpeakers } from '@/lib/hooks/use-queries';
 import { TranscriptSpeakerLabel } from './transcript-speaker';
@@ -18,7 +18,9 @@ interface RecordingTranscriptProps {
   audioUrl: string | null;
   meetingId: string;
   onPlaySegment?: (timeInSeconds: number) => void;
-  currentPlaybackTime?: number; // New prop to track current audio position
+  currentPlaybackTime?: number; // Track current audio position
+  canEdit?: boolean;
+  onEditSegment?: (segmentIndex: number) => void; // Add callback for editing a segment
 }
 
 export default function RecordingTranscript({
@@ -27,6 +29,8 @@ export default function RecordingTranscript({
   meetingId,
   onPlaySegment,
   currentPlaybackTime = 0,
+  canEdit = false,
+  onEditSegment,
 }: RecordingTranscriptProps) {
   const [parsedTranscript, setParsedTranscript] = useState<TranscriptSegment[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +47,16 @@ export default function RecordingTranscript({
       // Try to parse the transcription JSON
       const parsed = JSON.parse(transcription) as any;
 
-      // Validate the expected format
+      // Check if the parsed result is an array
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Direct array format
         setParsedTranscript(parsed);
+        setError(null);
+      }
+      // Check if the parsed result is an object with a segments array property
+      else if (parsed && Array.isArray(parsed.segments) && parsed.segments.length > 0) {
+        // Object with segments array format
+        setParsedTranscript(parsed.segments);
         setError(null);
       } else {
         setError('Invalid transcript format');
@@ -165,18 +176,32 @@ export default function RecordingTranscript({
                   {segment.timestamp}
                 </div>
 
-                {onPlaySegment && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={() => onPlaySegment(timestampToSeconds(segment.timestamp))}
-                    disabled={!audioUrl}
-                    aria-label={`Play from ${segment.timestamp}`}
-                  >
-                    <Play className="h-3 w-3" />
-                  </Button>
-                )}
+                <div className="flex gap-1">
+                  {onPlaySegment && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={() => onPlaySegment(timestampToSeconds(segment.timestamp))}
+                      disabled={!audioUrl}
+                      aria-label={`Play from ${segment.timestamp}`}
+                    >
+                      <Play className="h-3 w-3" />
+                    </Button>
+                  )}
+
+                  {canEdit && onEditSegment && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={() => onEditSegment(index)}
+                      aria-label={`Edit segment at ${segment.timestamp}`}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
 
                 <div className="flex-1">
                   {segment.speaker && (
@@ -188,7 +213,7 @@ export default function RecordingTranscript({
                       />
                     </div>
                   )}
-                  <div className="pl-7 text-sm">{segment.text}</div>
+                  <div className="text-sm">{segment.text}</div>
                 </div>
               </div>
             );

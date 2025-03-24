@@ -43,21 +43,19 @@ export function TranscriptSpeaker({
 
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
-      <Avatar className={avatarSize}>
+      <Avatar className={cn(avatarSize, 'h-4 w-4')}>
         <AvatarImage src={speakerInfo.image || undefined} />
         <AvatarFallback className={textSize}>{getFallback()}</AvatarFallback>
       </Avatar>
 
-      <div className="flex flex-col leading-tight">
-        <span className={nameSize}>{displayName}</span>
+      {/* <div className="flex flex-col leading-tight"> */}
+      <span className={nameSize}>{displayName}</span>
 
-        {/* Show email as subtitle if we have a name and email is different from display name */}
-        {speakerInfo.email && speakerInfo.name && speakerInfo.email !== displayName && (
-          <span className={cn('text-muted-foreground', size === 'sm' ? 'text-[10px]' : 'text-xs')}>
-            {speakerInfo.email}
-          </span>
-        )}
-      </div>
+      {/* Show email as subtitle if we have a name and email is different from display name */}
+      {speakerInfo.email && speakerInfo.name && speakerInfo.email !== displayName && (
+        <span className={cn('text-muted-foreground', 'text-xs')}>{speakerInfo.email}</span>
+      )}
+      {/* </div> */}
     </div>
   );
 }
@@ -74,6 +72,7 @@ export function TranscriptSpeakerLabel({
   size?: 'sm' | 'md';
 }) {
   const speakerInfo = speakerMap.get(speaker);
+  console.log('TranscriptSpeakerLabel', { speaker, speakerInfo });
   return (
     <TranscriptSpeaker
       speaker={speaker}

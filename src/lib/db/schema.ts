@@ -89,7 +89,7 @@ export const meetingRecording = pgTable('meeting_recording', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   transcription: text('transcription'),
-  transcriptionGeneratedAt: timestamp('transcription_generated_at'), // New field to track when the transcript was generated
+  transcriptionGeneratedAt: timestamp('transcription_generated_at'),
 });
 
 export const meetingParticipant = pgTable('meeting_participant', {

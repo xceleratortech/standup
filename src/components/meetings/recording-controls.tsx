@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '../ui/badge';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import CreateMeetingButton from '@/components/meetings/create-meeting-button';
 
 interface RecordingControlsProps {
   workspaceId: string;
@@ -919,6 +920,20 @@ export function RecordingControls({
     toast.info('Recording saved as draft. Access it from the Drafts tab.');
   };
 
+  const handleNewMeetingCreated = (newMeeting: any) => {
+    setSelectedMeetingId(newMeeting.id);
+    setShowMeetingCreateDialog(false);
+
+    // Update the meetings list
+    const formattedMeeting: Meeting = {
+      id: newMeeting.id,
+      title: newMeeting.title,
+      description: newMeeting.description,
+      createdAt: newMeeting.createdAt.toISOString(),
+    };
+    setExistingMeetings((prev) => [formattedMeeting, ...prev]);
+  };
+
   return (
     <>
       {/* Save Recording Dialog */}
@@ -940,39 +955,20 @@ export function RecordingControls({
         formatTime={formatTime}
       />
 
-      {/* Create New Meeting Dialog */}
+      {/* Replace the old Create Meeting Dialog with CreateMeetingButton */}
       <Dialog open={showMeetingCreateDialog} onOpenChange={setShowMeetingCreateDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Meeting</DialogTitle>
+            <DialogDescription>Create a new meeting to add your recording to.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="meeting-title">Meeting Title</Label>
-              <Input
-                id="meeting-title"
-                value={newMeetingTitle}
-                onChange={(e) => setNewMeetingTitle(e.target.value)}
-                placeholder="Enter meeting title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="meeting-description">Description (Optional)</Label>
-              <Textarea
-                id="meeting-description"
-                value={newMeetingDescription}
-                onChange={(e) => setNewMeetingDescription(e.target.value)}
-                placeholder="Enter meeting description"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMeetingCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={createNewMeeting}>Create Meeting</Button>
-          </DialogFooter>
+          <CreateMeetingButton
+            workspaceId={workspaceId}
+            inline
+            onMeetingCreated={handleNewMeetingCreated}
+            autoOpenDialog={true}
+            onDialogClose={() => setShowMeetingCreateDialog(false)}
+          />
         </DialogContent>
       </Dialog>
 

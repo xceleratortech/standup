@@ -14,6 +14,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { s3Client, S3_BUCKET } from '@/lib/s3';
 import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { user } from '../db/auth-schema';
 
 // Create a new meeting
 export async function createMeeting({
@@ -22,12 +23,14 @@ export async function createMeeting({
   description,
   startTime,
   endTime,
+  participantIds,
 }: {
   workspaceId: string;
   title: string;
   description?: string;
   startTime?: Date;
   endTime?: Date;
+  participantIds?: string[];
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -61,7 +64,36 @@ export async function createMeeting({
     })
     .returning();
 
-  revalidatePath(`/workspaces/${workspaceId}/meetings`);
+  // Add participants if provided
+  if (participantIds && participantIds.length > 0) {
+    // First validate that all participants are members of the workspace
+    const workspaceMembers = await db.query.workspaceUser.findMany({
+      where: eq(workspaceUser.workspaceId, workspaceId),
+    });
+
+    const validMemberIds = workspaceMembers.map((member) => member.userId);
+
+    // Filter out any invalid participant IDs
+    const validParticipantIds = participantIds.filter((id) => validMemberIds.includes(id));
+
+    // Add each participant
+    if (validParticipantIds.length > 0) {
+      await db.insert(meetingParticipant).values(
+        validParticipantIds.map((participantId) => ({
+          meetingId: newMeeting.id,
+          userId: participantId,
+        }))
+      );
+    }
+  } else {
+    // If no participants specified, add the creator as a participant
+    await db.insert(meetingParticipant).values({
+      meetingId: newMeeting.id,
+      userId: userId,
+    });
+  }
+
+  revalidatePath(`/workspace/${workspaceId}`);
   return newMeeting;
 }
 
@@ -130,6 +162,54 @@ export async function getWorkspaceMeetings(workspaceId: string) {
     .orderBy(desc(meeting.createdAt));
 
   return meetings;
+}
+
+// Get all members of a workspace
+export async function getWorkspaceMembers(workspaceId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  // Check if user has access to this workspace
+  const userWorkspace = await db.query.workspaceUser.findFirst({
+    where: and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)),
+  });
+
+  if (!userWorkspace) {
+    throw new Error("Workspace not found or you don't have access");
+  }
+
+  // Get all workspace members with user details using join
+  const workspaceMembers = await db
+    .select({
+      workspaceId: workspaceUser.workspaceId,
+      userId: workspaceUser.userId,
+      role: workspaceUser.role,
+      joinedAt: workspaceUser.createdAt,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      },
+    })
+    .from(workspaceUser)
+    .innerJoin(user, eq(workspaceUser.userId, user.id))
+    .where(eq(workspaceUser.workspaceId, workspaceId));
+
+  // Add an isCurrentUser flag to identify the current user
+  const formattedMembers = workspaceMembers.map((member) => ({
+    ...member,
+    isCurrentUser: member.userId === userId,
+  }));
+
+  return formattedMembers;
 }
 
 // Update a meeting

@@ -5,6 +5,8 @@ import {
   deleteRecording,
   generateMissingTranscriptions,
   regenerateRecordingTranscription,
+  updateRecordingTranscriptionJson,
+  type Transcript,
 } from '@/lib/actions/meeting-recordings';
 import {
   getMeetingOutcomes,
@@ -428,11 +430,21 @@ export function useTranscriptSpeakers(meetingId: string, transcription: string |
     try {
       // Parse the transcript JSON
       const parsedTranscript = JSON.parse(transcription);
-      if (!Array.isArray(parsedTranscript)) return result;
+
+      let segments: any[] = [];
+
+      // Handle both formats: array or object with segments property
+      if (Array.isArray(parsedTranscript)) {
+        segments = parsedTranscript;
+      } else if (parsedTranscript && Array.isArray(parsedTranscript.segments)) {
+        segments = parsedTranscript.segments;
+      } else {
+        return result;
+      }
 
       // Get unique speakers from transcript
       const speakers = new Set<string>();
-      parsedTranscript.forEach((entry) => {
+      segments.forEach((entry) => {
         if (entry.speaker) speakers.add(entry.speaker);
       });
 
@@ -478,4 +490,30 @@ export function useTranscriptSpeakers(meetingId: string, transcription: string |
   }, [transcription, participants]);
 
   return speakerMap;
+}
+
+// Hook to update a recording's transcription JSON
+export function useUpdateRecordingTranscriptionJson(meetingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      recordingId,
+      transcript,
+    }: {
+      recordingId: string;
+      transcript: Transcript;
+    }) => {
+      return updateRecordingTranscriptionJson({ recordingId, transcript });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch the recordings
+      queryClient.invalidateQueries({ queryKey: ['recordings', meetingId] });
+      toast.success('Transcript updated successfully');
+    },
+    onError: (error) => {
+      console.error('Error updating transcript:', error);
+      toast.error(`Failed to update transcript: ${error.message}`);
+    },
+  });
 }

@@ -9,8 +9,6 @@ import {
   FilePlus,
   ChevronDown,
   ChevronUp,
-  Play,
-  Pause,
   Loader2,
   RefreshCw,
 } from 'lucide-react';
@@ -39,6 +37,7 @@ import {
   useRegenerateRecordingTranscription,
 } from '@/lib/hooks/use-queries';
 import RecordingTranscript from './recording-transcript';
+import TranscriptEditor from './transcript-editor';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -94,6 +93,8 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   const [loadingRecordings, setLoadingRecordings] = useState<Record<string, boolean>>({});
   const [regeneratingIds, setRegeneratingIds] = useState<Record<string, boolean>>({});
   const [regenerateAllDialogOpen, setRegenerateAllDialogOpen] = useState(false);
+  const [editingTranscript, setEditingTranscript] = useState<string | null>(null);
+  const [editingSegmentIndex, setEditingSegmentIndex] = useState<number | undefined>(undefined);
 
   // Add an effect to refresh recordings when the component mounts or when recordings change
   useEffect(() => {
@@ -432,6 +433,68 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
     generateTranscriptions(true);
   };
 
+  // Create content items for TabsContent value="transcript"
+  const renderTranscriptContent = (recording: Recording) => {
+    // If we're currently editing this recording's transcript
+    if (editingTranscript === recording.id) {
+      return (
+        <TranscriptEditor
+          meetingId={meetingId}
+          recordingId={recording.id}
+          transcription={recording.transcription || null}
+          onClose={() => {
+            setEditingTranscript(null);
+            setEditingSegmentIndex(undefined);
+          }}
+          highlightedSegmentIndex={editingSegmentIndex}
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          {recording.transcriptionGeneratedAt && (
+            <div className="text-muted-foreground mb-2 text-xs">
+              Transcript generated{' '}
+              {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
+                addSuffix: true,
+              })}
+            </div>
+          )}
+
+          {canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingTranscript(recording.id);
+                setEditingSegmentIndex(undefined);
+              }}
+            >
+              Edit Transcript
+            </Button>
+          )}
+        </div>
+
+        {recording.transcription ? (
+          <RecordingTranscript
+            meetingId={meetingId}
+            transcription={recording.transcription}
+            audioUrl={recordingURLs[recording.id]}
+            currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
+            onPlaySegment={(timeInSeconds) => handlePlaySegment(recording.id, timeInSeconds)}
+            canEdit={canEdit}
+            onEditSegment={(segmentIndex) => {
+              setEditingTranscript(recording.id);
+              setEditingSegmentIndex(segmentIndex);
+            }}
+          />
+        ) : null}
+      </>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -541,6 +604,18 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                             addSuffix: true,
                           })}
                         </span>
+                        {recording.transcriptionGeneratedAt && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 text-xs">
+                              <RefreshCw className="h-3 w-3" />
+                              Transcript{' '}
+                              {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -651,26 +726,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                             </TabsContent>
 
                             <TabsContent value="transcript" className="mt-0">
-                              {recording.transcriptionGeneratedAt && (
-                                <div className="text-muted-foreground mb-2 text-xs">
-                                  Transcript generated{' '}
-                                  {formatDistanceToNow(
-                                    new Date(recording.transcriptionGeneratedAt),
-                                    {
-                                      addSuffix: true,
-                                    }
-                                  )}
-                                </div>
-                              )}
-                              <RecordingTranscript
-                                meetingId={meetingId}
-                                transcription={recording.transcription}
-                                audioUrl={recordingURLs[recording.id] || null}
-                                currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
-                                onPlaySegment={(timeInSeconds) =>
-                                  handlePlaySegment(recording.id, timeInSeconds)
-                                }
-                              />
+                              {renderTranscriptContent(recording)}
                             </TabsContent>
                           </Tabs>
                         ) : (

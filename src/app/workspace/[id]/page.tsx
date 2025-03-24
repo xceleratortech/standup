@@ -10,6 +10,7 @@ import { db } from '@/lib/db';
 import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import WorkspaceRecordingControls from '@/components/meetings/workspace-recording-controls';
+import CreateMeetingButton from '@/components/meetings/create-meeting-button';
 
 function LoadingWorkspace() {
   return (
@@ -37,6 +38,7 @@ async function WorkspaceData({ params }: { params: { id: string } }) {
     <div className="space-y-8 py-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Meetings</h2>
+        <CreateMeetingButton workspaceId={params.id} />
       </div>
 
       <div className="relative min-h-[300px]">
