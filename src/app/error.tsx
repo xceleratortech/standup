@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home, LogIn, LogOut, RotateCcw } from 'lucide-react';
+import { AlertCircle, Home, LogOut, RotateCcw, Mail } from 'lucide-react';
+import { Link } from '@/components/ui/link';
 
 export default function Error({
   error,
@@ -71,6 +71,16 @@ export default function Error({
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
+
+          <div className="mt-4 text-center">
+            <Link
+              href={`mailto:standup-support@raj.how${error.digest ? `?subject=Error Report: ${error.digest}` : ''}`}
+              className="text-muted-foreground hover:text-primary inline-flex items-center text-sm"
+            >
+              <Mail className="mr-1 h-3 w-3" />
+              Contact support at standup-support@raj.how
+            </Link>
+          </div>
         </CardFooter>
       </Card>
     </div>
