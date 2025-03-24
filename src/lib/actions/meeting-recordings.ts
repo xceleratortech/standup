@@ -535,19 +535,22 @@ export async function generateMissingTranscriptions(meetingId: string) {
       if (participantsWithVoices.length > 0) {
         for (const participant of participantsWithVoices) {
           // Add each voice sample for this participant
+          contentItems.push({
+            type: 'prompt' as const,
+            content: `Below are Voice samples for ${participant.name} (${participant.email}):`,
+          });
           for (const sample of participant.voiceSamples) {
             // Add the voice sample file
             contentItems.push({
               type: 'audiofile' as const,
               content: sample.fileKey,
             });
-
-            // Add prompt identifying this voice
-            contentItems.push({
-              type: 'prompt' as const,
-              content: `The voice sample above (${sample.sampleName || 'Voice Sample'}) belongs to: ${participant.name} (${participant.email})`,
-            });
           }
+          // Add prompt identifying this voice
+          contentItems.push({
+            type: 'prompt' as const,
+            content: `The voice samples above belong to: ${participant.name} (${participant.email})`,
+          });
         }
       }
 
