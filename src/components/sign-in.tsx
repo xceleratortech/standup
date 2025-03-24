@@ -13,10 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useState } from 'react';
-import { Loader2, Key } from 'lucide-react';
+import { Key } from 'lucide-react';
 import { signIn } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 import { Link } from './ui/link';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -76,26 +77,39 @@ export default function SignIn() {
             <Label htmlFor="remember">Remember me</Label>
           </div>
 
-          <Button
+          <LoadingButton
             type="submit"
             className="w-full"
-            disabled={loading}
+            isLoading={loading}
+            loadingText="Signing in..."
             onClick={async () => {
-              await signIn.email({ email, password });
+              setLoading(true);
+              try {
+                await signIn.email({ email, password });
+              } finally {
+                setLoading(false);
+              }
             }}
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Login'}
-          </Button>
+            Login
+          </LoadingButton>
 
           <div className={cn('flex w-full items-center gap-2', 'flex-col justify-between')}>
-            <Button
+            <LoadingButton
               variant="outline"
               className={cn('w-full gap-2')}
+              isLoading={loading}
+              loadingText="Signing in with Google..."
               onClick={async () => {
-                await signIn.social({
-                  provider: 'google',
-                  callbackURL: '/',
-                });
+                setLoading(true);
+                try {
+                  await signIn.social({
+                    provider: 'google',
+                    callbackURL: '/',
+                  });
+                } finally {
+                  setLoading(false);
+                }
               }}
             >
               <svg
@@ -122,7 +136,7 @@ export default function SignIn() {
                 ></path>
               </svg>
               Sign in with Google
-            </Button>
+            </LoadingButton>
           </div>
         </div>
       </CardContent>

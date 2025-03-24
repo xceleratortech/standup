@@ -12,10 +12,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { signUp } from '@/lib/auth-client';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 export function SignUp() {
   const [firstName, setFirstName] = useState('');
@@ -97,11 +97,13 @@ export function SignUp() {
               placeholder="Confirm Password"
             />
           </div>
-          <Button
+          <LoadingButton
             type="submit"
             className="w-full"
-            disabled={loading}
+            isLoading={loading}
+            loadingText="Creating account..."
             onClick={async () => {
+              setLoading(true);
               await signUp.email({
                 email,
                 password,
@@ -115,17 +117,19 @@ export function SignUp() {
                     setLoading(true);
                   },
                   onError: (ctx) => {
+                    setLoading(false);
                     toast.error(ctx.error.message);
                   },
                   onSuccess: async () => {
+                    setLoading(false);
                     router.push('/');
                   },
                 },
               });
             }}
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create an account'}
-          </Button>
+            Create an account
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>
