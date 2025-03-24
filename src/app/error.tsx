@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Home, LogOut, RotateCcw, Mail } from 'lucide-react';
 import { Link } from '@/components/ui/link';
+import { signOut } from '@/lib/auth-client';
 
 export default function Error({
   error,
@@ -21,13 +22,12 @@ export default function Error({
     console.error(error);
   }, [error]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Clear any authentication tokens from storage
-    localStorage.removeItem('token');
-    sessionStorage.removeItem('token');
+    await signOut();
 
     // Redirect to login page
-    router.push('/login');
+    router.push('/');
   };
 
   return (
@@ -73,13 +73,13 @@ export default function Error({
           </Button>
 
           <div className="mt-4 text-center">
-            <Link
+            <a
               href={`mailto:standup-support@raj.how${error.digest ? `?subject=Error Report: ${error.digest}` : ''}`}
               className="text-muted-foreground hover:text-primary inline-flex items-center text-sm"
             >
               <Mail className="mr-1 h-3 w-3" />
               Contact support at standup-support@raj.how
-            </Link>
+            </a>
           </div>
         </CardFooter>
       </Card>
