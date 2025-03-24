@@ -574,7 +574,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                 {/* Clickable header */}
                 <div
                   className={cn(
-                    'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 p-3 transition-colors',
+                    'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors',
                     expandedRecordings[recording.id] && 'rounded-b-none'
                   )}
                   onClick={() => toggleExpand(recording.id)}
