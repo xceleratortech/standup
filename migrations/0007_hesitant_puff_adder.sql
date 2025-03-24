@@ -1,0 +1,1 @@
+ALTER TABLE "user_voice_identity" ADD COLUMN "sample_name" text;

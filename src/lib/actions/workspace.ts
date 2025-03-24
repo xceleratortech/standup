@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { workspace, workspaceUser, userVoiceIdentity } from '@/lib/db/schema';
 import { user } from '@/lib/db/auth-schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, not, count } from 'drizzle-orm';
 import { generateSlug } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
@@ -188,12 +188,14 @@ export async function saveUserVoiceIdentity({
   sampleUrl,
   duration,
   durationSeconds,
+  sampleName,
 }: {
   workspaceId: string;
   fileKey: string;
   sampleUrl?: string;
   duration?: string;
   durationSeconds?: string;
+  sampleName?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -214,52 +216,39 @@ export async function saveUserVoiceIdentity({
     throw new Error("Workspace not found or you don't have access");
   }
 
-  // Check if user already has a voice identity sample
-  const existingSample = await db.query.userVoiceIdentity.findFirst({
-    where: and(
-      eq(userVoiceIdentity.workspaceId, workspaceId),
-      eq(userVoiceIdentity.userId, userId)
-    ),
-  });
+  // Count existing voice samples for this user in the workspace
+  const voiceSamplesCount = await db
+    .select({ count: count() })
+    .from(userVoiceIdentity)
+    .where(
+      and(eq(userVoiceIdentity.workspaceId, workspaceId), eq(userVoiceIdentity.userId, userId))
+    )
+    .then((result) => result[0]?.count || 0);
 
-  if (existingSample) {
-    // Update existing sample
-    const [updatedSample] = await db
-      .update(userVoiceIdentity)
-      .set({
-        fileKey,
-        sampleUrl,
-        duration,
-        durationSeconds,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(userVoiceIdentity.workspaceId, workspaceId), eq(userVoiceIdentity.userId, userId))
-      )
-      .returning();
-
-    revalidatePath(`/workspaces/${workspaceId}`);
-    return updatedSample;
-  } else {
-    // Create new sample
-    const [newSample] = await db
-      .insert(userVoiceIdentity)
-      .values({
-        workspaceId,
-        userId,
-        fileKey,
-        sampleUrl,
-        duration,
-        durationSeconds,
-      })
-      .returning();
-
-    revalidatePath(`/workspaces/${workspaceId}`);
-    return newSample;
+  // Check if user already has 3 voice samples
+  if (voiceSamplesCount >= 3) {
+    throw new Error("You've reached the maximum limit of 3 voice samples");
   }
+
+  // Create a new sample
+  const [newSample] = await db
+    .insert(userVoiceIdentity)
+    .values({
+      workspaceId,
+      userId,
+      fileKey,
+      sampleUrl,
+      duration,
+      durationSeconds,
+      sampleName: sampleName || `Voice Sample ${voiceSamplesCount + 1}`,
+    })
+    .returning();
+
+  revalidatePath(`/workspaces/${workspaceId}`);
+  return newSample;
 }
 
-// Get a user's voice identity sample
+// Get a user's voice identity samples
 export async function getUserVoiceIdentity({
   workspaceId,
   userId,
@@ -287,15 +276,113 @@ export async function getUserVoiceIdentity({
     throw new Error("Workspace not found or you don't have access");
   }
 
-  // Get the voice identity sample
-  const voiceIdentity = await db.query.userVoiceIdentity.findFirst({
+  // Get all voice identity samples
+  const voiceIdentities = await db.query.userVoiceIdentity.findMany({
     where: and(
       eq(userVoiceIdentity.workspaceId, workspaceId),
       eq(userVoiceIdentity.userId, targetUserId)
     ),
+    orderBy: userVoiceIdentity.createdAt,
   });
 
-  return voiceIdentity;
+  return voiceIdentities;
+}
+
+// Delete a specific voice identity sample
+export async function deleteUserVoiceIdentitySample({
+  workspaceId,
+  sampleId,
+  userId,
+}: {
+  workspaceId: string;
+  sampleId: string;
+  userId?: string;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  const currentUserId = session.user.id;
+  const targetUserId = userId || currentUserId;
+
+  // If deleting someone else's sample, check if current user is admin
+  if (targetUserId !== currentUserId) {
+    const userWorkspace = await db.query.workspaceUser.findFirst({
+      where: and(
+        eq(workspaceUser.workspaceId, workspaceId),
+        eq(workspaceUser.userId, currentUserId)
+      ),
+    });
+
+    if (!userWorkspace || userWorkspace.role !== 'admin') {
+      throw new Error('Unauthorized to delete other user voice samples');
+    }
+  }
+
+  // Delete the specific voice identity sample
+  await db
+    .delete(userVoiceIdentity)
+    .where(
+      and(
+        eq(userVoiceIdentity.id, sampleId),
+        eq(userVoiceIdentity.workspaceId, workspaceId),
+        eq(userVoiceIdentity.userId, targetUserId)
+      )
+    );
+
+  revalidatePath(`/workspaces/${workspaceId}`);
+  return { success: true };
+}
+
+// Delete all voice identity samples for a user
+export async function deleteUserVoiceIdentity({
+  workspaceId,
+  userId,
+}: {
+  workspaceId: string;
+  userId?: string;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+
+  const currentUserId = session.user.id;
+  const targetUserId = userId || currentUserId;
+
+  // If deleting someone else's sample, check if current user is admin
+  if (targetUserId !== currentUserId) {
+    const userWorkspace = await db.query.workspaceUser.findFirst({
+      where: and(
+        eq(workspaceUser.workspaceId, workspaceId),
+        eq(workspaceUser.userId, currentUserId)
+      ),
+    });
+
+    if (!userWorkspace || userWorkspace.role !== 'admin') {
+      throw new Error('Unauthorized to delete other user voice samples');
+    }
+  }
+
+  // Delete all voice identity samples for the user
+  await db
+    .delete(userVoiceIdentity)
+    .where(
+      and(
+        eq(userVoiceIdentity.workspaceId, workspaceId),
+        eq(userVoiceIdentity.userId, targetUserId)
+      )
+    );
+
+  revalidatePath(`/workspaces/${workspaceId}`);
+  return { success: true };
 }
 
 // Get all voice identity samples in a workspace
@@ -339,53 +426,6 @@ export async function getWorkspaceVoiceIdentities(workspaceId: string) {
   }));
 }
 
-// Delete a user's voice identity sample
-export async function deleteUserVoiceIdentity({
-  workspaceId,
-  userId,
-}: {
-  workspaceId: string;
-  userId?: string;
-}) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUserId = session.user.id;
-  const targetUserId = userId || currentUserId;
-
-  // If deleting someone else's sample, check if current user is admin
-  if (targetUserId !== currentUserId) {
-    const userWorkspace = await db.query.workspaceUser.findFirst({
-      where: and(
-        eq(workspaceUser.workspaceId, workspaceId),
-        eq(workspaceUser.userId, currentUserId)
-      ),
-    });
-
-    if (!userWorkspace || userWorkspace.role !== 'admin') {
-      throw new Error('Unauthorized to delete other user voice samples');
-    }
-  }
-
-  // Delete the voice identity sample
-  await db
-    .delete(userVoiceIdentity)
-    .where(
-      and(
-        eq(userVoiceIdentity.workspaceId, workspaceId),
-        eq(userVoiceIdentity.userId, targetUserId)
-      )
-    );
-
-  revalidatePath(`/workspaces/${workspaceId}`);
-  return { success: true };
-}
-
 // Generate upload URL for voice identity samples
 export async function getVoiceIdentityUploadUrl({
   workspaceId,
@@ -415,9 +455,11 @@ export async function getVoiceIdentityUploadUrl({
     throw new Error("Workspace not found or you don't have access");
   }
 
-  // Create a consistent file key using workspaceId and userId - this ensures
-  // that subsequent uploads will overwrite the previous voice sample
-  const fileKey = `voice-identities/${workspaceId}/${userId}/voice-sample.mp3`;
+  // Generate a unique id for this sample to avoid overwriting previous ones
+  const sampleId = uuidv4().split('-')[0];
+
+  // Create a unique file key using workspaceId, userId and sampleId
+  const fileKey = `voice-identities/${workspaceId}/${userId}/voice-sample-${sampleId}.mp3`;
 
   // Create a presigned URL for uploading using the centralized S3 module
   const uploadUrl = await generateUploadUrl(fileKey, contentType);

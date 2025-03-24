@@ -463,7 +463,7 @@ export async function generateMissingTranscriptions(meetingId: string) {
     return { message: 'No recordings need transcription', updated: 0 };
   }
 
-  // Get meeting participants with their user information and voice identities
+  // Get meeting participants with their user information
   const participants = await db
     .select({
       participant: meetingParticipant,
@@ -472,30 +472,51 @@ export async function generateMissingTranscriptions(meetingId: string) {
         name: user.name,
         email: user.email,
       },
-      voiceIdentity: {
-        fileKey: userVoiceIdentity.fileKey,
-      },
     })
     .from(meetingParticipant)
     .innerJoin(user, eq(meetingParticipant.userId, user.id))
-    .leftJoin(
-      userVoiceIdentity,
-      and(
-        eq(meetingParticipant.userId, userVoiceIdentity.userId),
-        eq(userVoiceIdentity.workspaceId, meetingData.workspaceId)
-      )
-    )
     .where(eq(meetingParticipant.meetingId, meetingId));
 
-  // Filter to participants who have voice samples
+  // Get all voice samples for all participants
+  const participantIds = participants.map((p) => p.user.id);
+
+  const voiceIdentities = await db
+    .select()
+    .from(userVoiceIdentity)
+    .where(
+      and(
+        eq(userVoiceIdentity.workspaceId, meetingData.workspaceId),
+        inArray(userVoiceIdentity.userId, participantIds)
+      )
+    );
+
+  // Group voice samples by user ID
+  const voiceSamplesByUser = voiceIdentities.reduce(
+    (acc, sample) => {
+      if (!acc[sample.userId]) {
+        acc[sample.userId] = [];
+      }
+      acc[sample.userId].push(sample);
+      return acc;
+    },
+    {} as Record<string, typeof voiceIdentities>
+  );
+
+  // Map participant info with their voice samples
   const participantsWithVoices = participants
-    .filter((p) => p.voiceIdentity?.fileKey)
-    .map((p) => ({
-      userId: p.user.id,
-      name: p.user.name,
-      email: p.user.email,
-      fileKey: p.voiceIdentity?.fileKey,
-    }));
+    .map((p) => {
+      const userSamples = voiceSamplesByUser[p.user.id] || [];
+      return {
+        userId: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        voiceSamples: userSamples.map((sample) => ({
+          fileKey: sample.fileKey,
+          sampleName: sample.sampleName || 'Voice Sample',
+        })),
+      };
+    })
+    .filter((p) => p.voiceSamples.length > 0);
 
   // Process each recording
   const results = [];
@@ -513,17 +534,18 @@ export async function generateMissingTranscriptions(meetingId: string) {
       // Add voice samples with their identifying information
       if (participantsWithVoices.length > 0) {
         for (const participant of participantsWithVoices) {
-          if (participant.fileKey) {
+          // Add each voice sample for this participant
+          for (const sample of participant.voiceSamples) {
             // Add the voice sample file
             contentItems.push({
               type: 'audiofile' as const,
-              content: participant.fileKey,
+              content: sample.fileKey,
             });
 
             // Add prompt identifying this voice
             contentItems.push({
               type: 'prompt' as const,
-              content: `The voice sample above belongs to: ${participant.name} (${participant.email})`,
+              content: `The voice sample above (${sample.sampleName || 'Voice Sample'}) belongs to: ${participant.name} (${participant.email})`,
             });
           }
         }

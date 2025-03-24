@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Square, Pause, Trash2, X } from 'lucide-react';
+import { Mic, MicOff, Square, Pause, Trash2, X, Plus, AlertTriangle } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +23,7 @@ import { useVoiceIdentityDownloadUrl, useVoiceIdentityOperations } from '@/lib/h
 import {
   saveUserVoiceIdentity,
   deleteUserVoiceIdentity,
+  deleteUserVoiceIdentitySample,
   getVoiceIdentityUploadUrl,
 } from '@/lib/actions/workspace';
 import { user } from '@/lib/db/auth-schema';
@@ -30,25 +31,44 @@ import { InferSelectModel } from 'drizzle-orm';
 import { cn } from '@/lib/utils';
 import { VariantProps } from 'class-variance-authority';
 import { ReactNode } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSession } from '@/lib/auth-client';
 
 type User = InferSelectModel<typeof user>;
 
 interface VoiceIdentityDialogProps {
   workspaceId: string;
   hasVoiceIdentity: boolean;
-  voiceIdentity?: any;
-  currentUser?: User;
+  voiceIdentities?: any[];
   className?: string;
   buttonVariant?: VariantProps<typeof buttonVariants>['variant'];
   buttonClassName?: string;
   buttonLabel?: ReactNode;
 }
 
+interface VoiceSample {
+  id: string;
+  fileKey: string;
+  sampleName: string;
+  duration?: string;
+  durationSeconds?: string;
+  createdAt?: Date;
+  audioUrl?: string;
+  isPlaying?: boolean;
+}
+
 export default function VoiceIdentityDialog({
   workspaceId,
   hasVoiceIdentity,
-  voiceIdentity,
-  currentUser,
+  voiceIdentities = [],
   className,
   buttonVariant = 'ghost',
   buttonClassName,
@@ -63,16 +83,19 @@ export default function VoiceIdentityDialog({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [recordingName, setRecordingName] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isNewRecordingMode, setIsNewRecordingMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sampleToDelete, setSampleToDelete] = useState<string | null>(null);
+  const [deleteAllSamples, setDeleteAllSamples] = useState(false);
+  const [voiceSamples, setVoiceSamples] = useState<VoiceSample[]>([]);
+  const [maxRecordingReached, setMaxRecordingReached] = useState(false);
+
+  const { data: session } = useSession();
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioBlobRef = useRef<Blob | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioAnalyserRef = useRef<AnalyserNode | null>(null);
   const audioDataRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -92,27 +115,49 @@ export default function VoiceIdentityDialog({
   }, []);
 
   useEffect(() => {
-    if (isOpen && voiceIdentity) {
-      setRecordingName(voiceIdentity.sampleUrl?.split('/').pop() || 'Voice Sample');
+    if (isOpen) {
+      // Reset recording state when dialog opens
+      resetRecordingState();
+      setIsNewRecordingMode(false);
 
-      // Fetch audio URL for existing voice identity when dialog opens
-      if (hasVoiceIdentity && voiceIdentity.fileKey) {
-        console.log('voice id', voiceIdentity);
-        fetchAudioUrl(voiceIdentity.fileKey);
+      // Initialize voice samples from provided identities
+      if (voiceIdentities && voiceIdentities.length > 0) {
+        const samples = voiceIdentities.map((identity) => ({
+          id: identity.id,
+          fileKey: identity.fileKey,
+          sampleName: identity.sampleName || `Voice Sample`,
+          duration: identity.duration || '00:00',
+          durationSeconds: identity.durationSeconds || '0',
+          createdAt: identity.createdAt ? new Date(identity.createdAt) : undefined,
+          isPlaying: false,
+        }));
+        setVoiceSamples(samples);
+
+        // Check if we've reached the maximum number of samples
+        setMaxRecordingReached(samples.length >= 3);
+
+        // Fetch audio URLs for all samples
+        samples.forEach((sample) => {
+          fetchAudioUrl(sample.id, sample.fileKey);
+        });
+      } else {
+        setVoiceSamples([]);
+        setMaxRecordingReached(false);
       }
-    } else {
-      setRecordingName(`Voice of ${currentUser?.name || 'Me'}`);
+
+      setRecordingName(`Voice of ${session?.user.name || 'Me'}`);
     }
+  }, [isOpen, voiceIdentities, session?.user.name]);
 
-    // Reset new recording mode when dialog opens/closes
-    setIsNewRecordingMode(false);
-  }, [isOpen, voiceIdentity, currentUser, hasVoiceIdentity]);
-
-  // Fetch the audio URL from S3
-  const fetchAudioUrl = async (fileKey: string) => {
+  // Fetch the audio URL for a sample
+  const fetchAudioUrl = async (sampleId: string, fileKey: string) => {
     try {
       const { downloadUrl } = await getDownloadUrl(fileKey);
-      setAudioUrl(downloadUrl);
+      setVoiceSamples((prev) =>
+        prev.map((sample) =>
+          sample.id === sampleId ? { ...sample, audioUrl: downloadUrl } : sample
+        )
+      );
     } catch (error) {
       console.error('Error fetching audio URL:', error);
       toast.error('Failed to load voice sample');
@@ -127,7 +172,14 @@ export default function VoiceIdentityDialog({
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1);
+      setRecordingTime((prev) => {
+        // Limit recording to 1 minute (60 seconds)
+        if (prev >= 60) {
+          stopRecording();
+          return 60;
+        }
+        return prev + 1;
+      });
     }, 1000);
   };
 
@@ -260,7 +312,20 @@ export default function VoiceIdentityDialog({
 
         // Create a URL for the audio blob and set it for the player
         const audioUrl = URL.createObjectURL(audioBlob);
-        setAudioUrl(audioUrl);
+
+        // Create a temporary voice sample for preview
+        const tempSample: VoiceSample = {
+          id: 'temp-recording',
+          fileKey: '',
+          sampleName: recordingName || `New Voice Sample`,
+          duration: formatTime(recordingTime),
+          durationSeconds: recordingTime.toString(),
+          audioUrl,
+          isPlaying: false,
+        };
+
+        // Add to voice samples for preview
+        setVoiceSamples((prev) => [...prev, tempSample]);
 
         toast.success('Recording completed');
         resolve();
@@ -287,11 +352,20 @@ export default function VoiceIdentityDialog({
 
     resetRecordingState();
     setIsNewRecordingMode(false);
+
+    // Remove the temporary recording if it exists
+    setVoiceSamples((prev) => prev.filter((s) => s.id !== 'temp-recording'));
+
     toast.info('Recording discarded');
   };
 
-  const togglePlayAudio = () => {
-    setIsPlaying(!isPlaying);
+  const togglePlayAudio = (sampleId: string) => {
+    setVoiceSamples((prev) =>
+      prev.map((sample) => ({
+        ...sample,
+        isPlaying: sample.id === sampleId ? !sample.isPlaying : false,
+      }))
+    );
   };
 
   const saveVoiceIdentity = async () => {
@@ -336,21 +410,24 @@ export default function VoiceIdentityDialog({
               sampleUrl: `${fileKey}`,
               duration: formatTime(recordingTime),
               durationSeconds: recordingTime.toString(),
+              sampleName: recordingName,
             });
 
-            toast.success('Voice identity saved');
+            toast.success('Voice sample saved');
             setIsUploading(false);
             setUploadProgress(0);
             resetRecordingState();
             audioBlobRef.current = null;
             setIsNewRecordingMode(false);
-            setIsOpen(false);
 
-            // Invalidate queries to refresh the data instead of reloading the page
+            // Remove the temporary recording
+            setVoiceSamples((prev) => prev.filter((s) => s.id !== 'temp-recording'));
+
+            // Invalidate queries to refresh the data
             invalidateVoiceIdentity(workspaceId);
           } catch (error) {
             console.error('Error saving voice identity:', error);
-            setUploadError('Failed to save voice identity details.');
+            setUploadError('Failed to save voice sample details.');
             setIsUploading(false);
           }
         } else {
@@ -371,7 +448,7 @@ export default function VoiceIdentityDialog({
 
       xhr.send(audioBlobRef.current);
     } catch (error) {
-      let errorMessage = 'An error occurred while saving your voice identity.';
+      let errorMessage = 'An error occurred while saving your voice sample.';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -380,19 +457,51 @@ export default function VoiceIdentityDialog({
     }
   };
 
-  const deleteVoiceIdentity = async () => {
+  const deleteSample = async () => {
     try {
-      await deleteUserVoiceIdentity({ workspaceId });
-      toast.success('Voice identity deleted');
-      setShowDeleteConfirm(false);
-      setIsOpen(false);
+      if (deleteAllSamples) {
+        // Delete all voice samples
+        await deleteUserVoiceIdentity({ workspaceId });
+        toast.success('All voice samples deleted');
+      } else if (sampleToDelete) {
+        // Delete a specific voice sample
+        await deleteUserVoiceIdentitySample({ workspaceId, sampleId: sampleToDelete });
+        toast.success('Voice sample deleted');
+      }
 
-      // Invalidate queries to refresh the data instead of reloading the page
+      setShowDeleteConfirm(false);
+      setSampleToDelete(null);
+      setDeleteAllSamples(false);
+
+      // Invalidate queries to refresh the data
       invalidateVoiceIdentity(workspaceId);
     } catch (error) {
-      toast.error('Failed to delete voice identity');
-      console.error('Error deleting voice identity:', error);
+      toast.error('Failed to delete voice sample');
+      console.error('Error deleting voice sample:', error);
     }
+  };
+
+  // Handler to request deletion of a specific sample
+  const handleDeleteSample = (sampleId: string) => {
+    setSampleToDelete(sampleId);
+    setDeleteAllSamples(false);
+    setShowDeleteConfirm(true);
+  };
+
+  // Handler to request deletion of all samples
+  const handleDeleteAllSamples = () => {
+    setSampleToDelete(null);
+    setDeleteAllSamples(true);
+    setShowDeleteConfirm(true);
+  };
+
+  // Start a new recording (only if we haven't reached the limit)
+  const handleStartNewRecording = () => {
+    if (voiceSamples.length >= 3) {
+      toast.error('Maximum of 3 voice samples allowed');
+      return;
+    }
+    startRecording();
   };
 
   return (
@@ -407,49 +516,87 @@ export default function VoiceIdentityDialog({
             {buttonLabel || <Mic className="h-4 w-4" />}
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {hasVoiceIdentity ? 'Your Voice Identity' : 'Set Up Voice Identity'}
+              {hasVoiceIdentity ? 'Your Voice Samples' : 'Set Up Voice Identity'}
             </DialogTitle>
             <DialogDescription>
               {hasVoiceIdentity
-                ? 'Your voice identity helps identify you in meeting transcripts and recordings.'
-                : 'Record a sample of your voice to help identify you in meeting transcripts.'}
+                ? 'Your voice samples help identify you in meeting transcripts. You can have up to 3 samples (max 1 minute each).'
+                : 'Record up to 3 voice samples (max 1 minute each) to help identify you in meeting transcripts.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Voice Sample Information */}
-            {hasVoiceIdentity && !isRecording && !isNewRecordingMode && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-xs font-normal">
-                    {voiceIdentity?.duration || 'Unknown duration'}
-                  </Badge>
-                  <p className="text-muted-foreground text-xs">
-                    {voiceIdentity?.createdAt
-                      ? `Created ${formatDistanceToNow(new Date(voiceIdentity.createdAt), { addSuffix: true })}`
-                      : 'Recently created'}
+            {/* Maximum Recording Warning */}
+            {maxRecordingReached &&
+              !isRecording &&
+              !voiceSamples.some((s) => s.id === 'temp-recording') && (
+                <div className="flex items-center gap-2 rounded-md bg-amber-50 p-3 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <p className="text-sm">
+                    You've reached the maximum of 3 voice samples. Delete a sample to add a new one.
                   </p>
                 </div>
+              )}
 
-                {/* Custom audio player */}
-                {audioUrl && (
-                  <div className="flex justify-center pt-2">
-                    <AudioPlayer
-                      src={audioUrl}
-                      isPlaying={isPlaying}
-                      onPlayPause={togglePlayAudio}
-                      totalDurationSeconds={
-                        voiceIdentity?.durationSeconds
-                          ? parseInt(voiceIdentity.durationSeconds, 10)
-                          : undefined
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                )}
+            {/* Voice Sample Cards */}
+            {!isRecording && voiceSamples.length > 0 && (
+              <div className="space-y-3">
+                {voiceSamples.map((sample) => (
+                  <Card key={sample.id} className="overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{sample.sampleName}</CardTitle>
+                        {sample.id !== 'temp-recording' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleDeleteSample(sample.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete this sample</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs font-normal">
+                          {sample.duration || '00:00'}
+                        </Badge>
+                        {sample.createdAt && (
+                          <p className="text-muted-foreground text-xs">
+                            {formatDistanceToNow(sample.createdAt, { addSuffix: true })}
+                          </p>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-1 pb-3">
+                      {sample.audioUrl && (
+                        <AudioPlayer
+                          src={sample.audioUrl}
+                          isPlaying={sample.isPlaying || false}
+                          onPlayPause={() => togglePlayAudio(sample.id)}
+                          totalDurationSeconds={
+                            sample.durationSeconds
+                              ? parseInt(sample.durationSeconds, 10)
+                              : undefined
+                          }
+                          className="w-full"
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
 
@@ -478,7 +625,11 @@ export default function VoiceIdentityDialog({
                 <div className="mb-4 text-center">
                   <p className="font-mono text-2xl font-medium">{formatTime(recordingTime)}</p>
                   <p className="text-muted-foreground text-sm">
-                    {isPaused ? 'Recording paused' : 'Recording...'}
+                    {isPaused
+                      ? 'Recording paused'
+                      : recordingTime >= 60
+                        ? 'Maximum duration reached (1 minute)'
+                        : 'Recording...'}
                   </p>
                 </div>
 
@@ -506,6 +657,7 @@ export default function VoiceIdentityDialog({
                       size="icon"
                       className="h-12 w-12 rounded-full bg-yellow-500 hover:bg-yellow-600"
                       onClick={pauseRecording}
+                      disabled={recordingTime >= 60}
                     >
                       <Pause className="h-5 w-5" />
                     </Button>
@@ -523,8 +675,8 @@ export default function VoiceIdentityDialog({
               </div>
             )}
 
-            {/* Recording name input */}
-            {!isRecording && (
+            {/* Recording name input - only show when a new recording is made */}
+            {!isRecording && voiceSamples.some((s) => s.id === 'temp-recording') && (
               <div className="space-y-2">
                 <Input
                   value={recordingName}
@@ -548,47 +700,46 @@ export default function VoiceIdentityDialog({
             {uploadError && (
               <p className="text-destructive mt-2 text-center text-sm">{uploadError}</p>
             )}
-
-            {/* Preview of recorded audio with custom player */}
-            {audioBlobRef.current && !isRecording && isNewRecordingMode && (
-              <div className="flex justify-center pt-2">
-                <AudioPlayer
-                  src={audioUrl || ''}
-                  isPlaying={isPlaying}
-                  onPlayPause={togglePlayAudio}
-                  totalDurationSeconds={recordingTime}
-                  className="w-full"
-                />
-              </div>
-            )}
           </div>
 
-          <DialogFooter>
-            {hasVoiceIdentity && !isRecording && !audioBlobRef.current && (
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isUploading}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Voice ID
-              </Button>
-            )}
-
-            {!isRecording && (
-              <>
-                {audioBlobRef.current ? (
-                  <Button onClick={saveVoiceIdentity} disabled={isUploading}>
-                    {isUploading ? 'Uploading...' : 'Save Voice Identity'}
-                  </Button>
-                ) : (
-                  <Button onClick={startRecording} disabled={isUploading}>
-                    <Mic className="mr-2 h-4 w-4" />
-                    {hasVoiceIdentity ? 'Record New Sample' : 'Start Recording'}
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:justify-between sm:space-y-0 sm:space-x-2">
+            <div className="flex space-x-2">
+              {hasVoiceIdentity &&
+                !isRecording &&
+                voiceSamples.length > 0 &&
+                !voiceSamples.some((s) => s.id === 'temp-recording') && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAllSamples}
+                    disabled={isUploading}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete All Samples
                   </Button>
                 )}
-              </>
-            )}
+            </div>
+
+            <div className="flex space-x-2">
+              {voiceSamples.some((s) => s.id === 'temp-recording') ? (
+                <Button onClick={saveVoiceIdentity} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Save Voice Sample'}
+                </Button>
+              ) : (
+                !isRecording && (
+                  <Button
+                    onClick={handleStartNewRecording}
+                    disabled={
+                      isUploading ||
+                      (voiceSamples.length >= 3 &&
+                        !voiceSamples.some((s) => s.id === 'temp-recording'))
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {voiceSamples.length > 0 ? 'Add Another Sample' : 'Record Sample'}
+                  </Button>
+                )
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -597,17 +748,28 @@ export default function VoiceIdentityDialog({
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Voice Identity?</DialogTitle>
+            <DialogTitle>
+              {deleteAllSamples ? 'Delete All Voice Samples?' : 'Delete Voice Sample?'}
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete your voice identity? This action cannot be undone.
+              {deleteAllSamples
+                ? 'Are you sure you want to delete all your voice samples? This action cannot be undone.'
+                : 'Are you sure you want to delete this voice sample? This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setSampleToDelete(null);
+                setDeleteAllSamples(false);
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteVoiceIdentity}>
-              Delete Voice Identity
+            <Button variant="destructive" onClick={deleteSample}>
+              {deleteAllSamples ? 'Delete All Samples' : 'Delete Sample'}
             </Button>
           </DialogFooter>
         </DialogContent>

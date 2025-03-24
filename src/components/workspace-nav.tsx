@@ -30,7 +30,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const voiceIdentity = await getUserVoiceIdentity({ workspaceId });
+  const voiceIdentities = await getUserVoiceIdentity({ workspaceId });
 
   // Ensure workspace has all required non-optional properties
   const workspace = {
@@ -111,34 +111,19 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
           <div className="hidden items-center gap-2 md:flex">
             <VoiceIdentityDialog
               workspaceId={workspaceId}
-              hasVoiceIdentity={!!voiceIdentity}
-              voiceIdentity={voiceIdentity}
-              currentUser={
-                session?.user
-                  ? {
-                      ...session.user,
-                      image: session.user.image || null,
-                    }
-                  : undefined
-              }
+              hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
+              voiceIdentities={voiceIdentities}
               buttonLabel={
                 <>
                   <Mic className="h-4 w-4" />
-                  {!!voiceIdentity ? 'Voice ID' : 'Set Up Voice ID'}
+                  {voiceIdentities && voiceIdentities.length > 0
+                    ? `Voice Samples (${voiceIdentities.length})`
+                    : 'Set Up Voice ID'}
                 </>
               }
               buttonVariant="outline"
             />
-            <UserProfileMenu
-              user={
-                session?.user
-                  ? {
-                      ...session.user,
-                      image: session.user.image || null,
-                    }
-                  : undefined
-              }
-            />
+            <UserProfileMenu user={session?.user} />
           </div>
 
           {/* Mobile controls */}
@@ -204,23 +189,17 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
 
                       <VoiceIdentityDialog
                         workspaceId={workspaceId}
-                        hasVoiceIdentity={!!voiceIdentity}
-                        voiceIdentity={voiceIdentity}
-                        currentUser={
-                          session?.user
-                            ? {
-                                ...session.user,
-                                image: session.user.image || null,
-                              }
-                            : undefined
-                        }
+                        hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
+                        voiceIdentities={voiceIdentities}
                         className="w-full"
                         buttonVariant="outline"
                         buttonClassName="w-full justify-start"
                         buttonLabel={
                           <>
                             <Mic className="mr-2 h-4 w-4" />
-                            Voice Identity
+                            {voiceIdentities && voiceIdentities.length > 0
+                              ? `Voice Samples (${voiceIdentities.length})`
+                              : 'Set Up Voice ID'}
                           </>
                         }
                       />
@@ -230,16 +209,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
               </DialogContent>
             </Dialog>
 
-            <UserProfileMenu
-              user={
-                session?.user
-                  ? {
-                      ...session.user,
-                      image: session.user.image || null,
-                    }
-                  : undefined
-              }
-            />
+            <UserProfileMenu user={session?.user} />
           </div>
         </div>
       </div>

@@ -20,7 +20,7 @@ import {
   updateMemberRole,
   removeMember,
 } from '@/lib/actions/workspace-members';
-import { getVoiceIdentityUrl } from '@/lib/actions/workspace';
+import { getVoiceIdentityUrl, getUserVoiceIdentity } from '@/lib/actions/workspace';
 import { getDownloadExpiry } from '@/lib/s3';
 import { useMemo } from 'react';
 
@@ -121,9 +121,18 @@ export function useVoiceIdentityOperations() {
   return {
     invalidateVoiceIdentity: (workspaceId: string) => {
       queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ['voiceIdentity', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['voiceIdentities', workspaceId] });
     },
   };
+}
+
+// Add new hook for managing multiple voice samples
+export function useVoiceIdentities(workspaceId: string, userId?: string) {
+  return useQuery({
+    queryKey: ['voiceIdentities', workspaceId, userId],
+    queryFn: () => getUserVoiceIdentity({ workspaceId, userId }),
+    enabled: !!workspaceId,
+  });
 }
 
 // --- Outcome hooks ---

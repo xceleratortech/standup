@@ -129,6 +129,7 @@ export const userVoiceIdentity = pgTable('user_voice_identity', {
     .references(() => user.id, { onDelete: 'cascade' }),
   fileKey: text('file_key').notNull(),
   sampleUrl: text('sample_url'),
+  sampleName: text('sample_name'), // Added sampleName field
   duration: text('duration'),
   durationSeconds: text('duration_seconds'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

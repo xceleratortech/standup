@@ -50,6 +50,13 @@
       "when": 1742668876425,
       "tag": "0006_fluffy_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742797055194,
+      "tag": "0007_hesitant_puff_adder",
+      "breakpoints": true
     }
   ]
 }
