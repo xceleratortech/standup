@@ -796,7 +796,7 @@ export default function VoiceIdentityDialog({
                   <Button
                     onClick={handleStartNewRecording}
                     disabled={isUploading}
-                    className="relative animate-pulse"
+                    className="relative animate-bounce"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     {voiceSamples.length > 0
