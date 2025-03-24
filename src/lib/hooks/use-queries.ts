@@ -387,8 +387,7 @@ export function useRegenerateRecordingTranscription(meetingId: string) {
 }
 
 // Add a function to be used by other mutations to trigger transcription generation
-export function triggerTranscriptionGeneration(meetingId: string) {
-  const queryClient = useQueryClient();
+export function triggerTranscriptionGeneration(meetingId: string, queryClient: any) {
   // Call the server action directly
   generateMissingTranscriptions(meetingId)
     .then((result) => {
