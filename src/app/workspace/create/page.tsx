@@ -42,7 +42,7 @@ export default function CreateWorkspacePage() {
           <CardTitle>Create New Workspace</CardTitle>
           <CardDescription>Create your first workspace to get started</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form className="space-y-2" onSubmit={handleSubmit}>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
