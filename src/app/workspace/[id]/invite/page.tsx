@@ -38,6 +38,7 @@ export default function InviteMemberPage(props: { params: Promise<{ id: string }
     setError(null);
 
     try {
+      router.prefetch(`/workspace/${params.id}/invites`);
       const emailToSend = linkOnly ? undefined : email;
       const invite = await createWorkspaceInvite({
         workspaceId: params.id,
@@ -139,7 +140,8 @@ export default function InviteMemberPage(props: { params: Promise<{ id: string }
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push(`/workspace/${params.id}`)}
+              onMouseDown={() => router.push(`/workspace/${params.id}`)}
+              onMouseOver={() => router.prefetch(`/workspace/${params.id}`)}
               disabled={isLoading}
             >
               Cancel

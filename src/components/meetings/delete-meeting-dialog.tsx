@@ -28,6 +28,7 @@ export function DeleteMeetingDialog({ meetingId, workspaceId }: DeleteMeetingDia
 
   const handleDelete = async () => {
     try {
+      router.prefetch(`/workspace/${workspaceId}`);
       setIsDeleting(true);
       await deleteMeeting(meetingId);
       toast.success('Meeting deleted successfully');

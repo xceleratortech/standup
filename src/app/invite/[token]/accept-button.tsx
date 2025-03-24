@@ -18,6 +18,8 @@ export default function AcceptInviteButton({ token }: { token: string }) {
       const result = await acceptWorkspaceInvite(token);
       if (result.success) {
         router.push(`/workspace/${result.workspaceId}`);
+      } else {
+        setError(result.error || 'Failed to accept invitation');
       }
     } catch (err) {
       setError((err as Error).message || 'Failed to accept invitation');

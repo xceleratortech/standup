@@ -52,6 +52,7 @@ export default function MemberActions({
 
     setIsRemoving(true);
     try {
+      router.prefetch(`/workspace/${workspaceId}`);
       await removeMember({
         workspaceId,
         userId,

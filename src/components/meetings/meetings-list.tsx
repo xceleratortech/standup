@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +5,7 @@ import { Mic, FileText, Calendar, Users, Clock } from 'lucide-react';
 import { db } from '@/lib/db';
 import { meetingParticipant, meetingRecording } from '@/lib/db/schema';
 import { eq, count } from 'drizzle-orm';
+import { Link } from '../ui/link';
 
 interface MeetingsListProps {
   meetings: any[];
@@ -60,6 +60,7 @@ export default async function MeetingsList({ meetings, workspaceId }: MeetingsLi
         return (
           <Link
             href={`/workspace/${workspaceId}/meeting/${meeting.id}`}
+            prefetch
             key={meeting.id}
             className="block transition-transform hover:scale-[1.02]"
           >

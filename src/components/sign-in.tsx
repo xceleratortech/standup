@@ -15,8 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useState } from 'react';
 import { Loader2, Key } from 'lucide-react';
 import { signIn } from '@/lib/auth-client';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { Link } from './ui/link';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -49,12 +49,12 @@ export default function SignIn() {
           </div>
 
           <div className="grid gap-2">
-            <div className="flex items-center">
+            {/* <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
               <Link href="#" className="ml-auto inline-block text-sm underline">
                 Forgot your password?
               </Link>
-            </div>
+            </div> */}
 
             <Input
               id="password"

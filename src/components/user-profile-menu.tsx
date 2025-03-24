@@ -12,11 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/lib/auth-client';
-import { LogOut, Settings, User } from 'lucide-react';
-import Link from 'next/link';
+import { LogOut } from 'lucide-react';
 import Avvvatars from 'avvvatars-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Link } from './ui/link';
 
 interface UserProfileMenuProps {
   user?: {
@@ -35,7 +35,9 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
   if (!user) {
     return (
       <Button asChild variant="ghost" size="sm">
-        <Link href="/login">Login</Link>
+        <Link prefetch href="/login">
+          Login
+        </Link>
       </Button>
     );
   }

@@ -217,17 +217,18 @@ export async function acceptWorkspaceInvite(token: string) {
   });
 
   if (!invite) {
-    throw new Error('Invalid or expired invite');
+    // throw new Error('Invalid or expired invite');
+    return { error: 'Invalid or expired invite', success: false };
   }
 
   // Check if invite has expired
   if (new Date(invite.expiresAt) < new Date()) {
-    throw new Error('This invitation has expired');
+    return { error: 'This invitation has expired', success: false };
   }
 
   // If the invite was for a specific email, check that it matches
   if (invite.email && invite.email !== email) {
-    throw new Error('This invitation was for another email address');
+    return { error: 'This invitation was for another email address', success: false };
   }
 
   // Check if user is already a member
@@ -236,7 +237,7 @@ export async function acceptWorkspaceInvite(token: string) {
   });
 
   if (existingMember) {
-    throw new Error('You are already a member of this workspace');
+    return { error: 'You are already a member of this workspace', success: false };
   }
 
   // Add user to workspace

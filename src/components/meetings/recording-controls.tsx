@@ -739,6 +739,7 @@ export function RecordingControls({
       xhr.onload = async () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
+            router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
             // Add recording to the meeting
             await addMeetingRecording({
               meetingId: selectedMeetingId,
@@ -775,7 +776,7 @@ export function RecordingControls({
 
             // Navigate to the meeting page
             router.push(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
-            router.refresh();
+            // router.refresh();
           } catch (error) {
             console.error('Error saving recording:', error);
             setUploadError('Failed to save recording details.');
@@ -841,6 +842,8 @@ export function RecordingControls({
         contentType: selectedDraft.blob.type,
       });
 
+      router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
+
       // Upload the file
       await fetch(uploadUrl, {
         method: 'PUT',
@@ -877,7 +880,7 @@ export function RecordingControls({
 
       // Navigate to the meeting
       router.push(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
-      router.refresh();
+      // router.refresh();
     } catch (error) {
       console.error('Failed to add recording to meeting:', error);
       toast.dismiss();

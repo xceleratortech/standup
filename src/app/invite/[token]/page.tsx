@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { Authenticate } from '@/components/auth';
 import AcceptInviteButton from './accept-button';
-import Link from 'next/link';
+import { Link } from '@/components/ui/link';
 
 export default async function InvitePage(props: { params: Promise<{ token: string }> }) {
   const params = await props.params;
@@ -38,6 +38,7 @@ export default async function InvitePage(props: { params: Promise<{ token: strin
         <div className="mt-4">
           <Link
             href="/"
+            prefetch
             className="ring-offset-background focus-visible:ring-ring text-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
           >
             Decline

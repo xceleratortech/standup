@@ -4,12 +4,12 @@ import { getWorkspace } from '@/lib/actions/workspace';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import DeleteInviteButton from './delete-button';
 import WorkspaceNav from '@/components/workspace-nav';
 import CopyLinkButton from './copy-button';
+import { Link } from '@/components/ui/link';
+import { Button } from '@/components/ui/button';
 
 function LoadingInvites() {
   return (
@@ -43,10 +43,14 @@ async function InvitesData({ params }: { params: { id: string } }) {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href={`/workspace/${params.id}`}>Back to Workspace</Link>
+            <Link prefetch href={`/workspace/${params.id}`}>
+              Back to Workspace
+            </Link>
           </Button>
           <Button asChild size="sm">
-            <Link href={`/workspace/${params.id}/invite`}>New Invite</Link>
+            <Link prefetch href={`/workspace/${params.id}/invite`}>
+              New Invite
+            </Link>
           </Button>
         </div>
       </div>

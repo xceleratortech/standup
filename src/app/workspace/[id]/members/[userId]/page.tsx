@@ -3,9 +3,9 @@ import { getWorkspaceMembers } from '@/lib/actions/workspace-members';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import MemberActions from './member-actions';
+import { Link } from '@/components/ui/link';
 
 export default async function ManageMemberPage(props: {
   params: Promise<{ id: string; userId: string }>;
@@ -43,7 +43,9 @@ export default async function ManageMemberPage(props: {
             <p className="text-muted-foreground">{workspace.name}</p>
           </div>
           <Button asChild variant="outline">
-            <Link href={`/workspace/${params.id}`}>Back to Workspace</Link>
+            <Link prefetch href={`/workspace/${params.id}`}>
+              Back to Workspace
+            </Link>
           </Button>
         </div>
 

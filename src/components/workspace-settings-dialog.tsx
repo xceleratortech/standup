@@ -15,7 +15,6 @@ import { Cog, MoreVertical, UserPlus, Settings } from 'lucide-react';
 import { type InferSelectModel } from 'drizzle-orm';
 import { workspace } from '@/lib/db/schema';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -38,6 +37,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
+import { Link } from './ui/link';
 
 type Workspace = InferSelectModel<typeof workspace>;
 
@@ -282,7 +282,7 @@ function WorkspaceSettingsDialog({
           {isCurrentUserAdmin && (
             <div className="bg-background flex items-center justify-center border-t px-6 py-4">
               <Button asChild variant="outline" size="sm" className="h-8 text-xs">
-                <Link href={`/workspace/${workspace.id}/invites`}>
+                <Link prefetch href={`/workspace/${workspace.id}/invites`}>
                   <UserPlus className="mr-1 h-3 w-3" />
                   Invite Members
                 </Link>

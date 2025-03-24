@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronDown, Building } from 'lucide-react';
@@ -13,6 +12,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Link } from './ui/link';
 
 // We'll use simple serializable props instead of complex types
 interface SerializableWorkspace {
@@ -65,6 +65,7 @@ export function WorkspaceSelector({ currentWorkspaceId, workspaces }: WorkspaceS
                 >
                   <Link
                     href={`/workspace/${workspace.id}`}
+                    prefetch
                     className="flex w-full items-center justify-between"
                   >
                     <div className="flex flex-col">
@@ -85,7 +86,9 @@ export function WorkspaceSelector({ currentWorkspaceId, workspaces }: WorkspaceS
           </CommandList>
           <div className="border-t p-2">
             <Button asChild variant="ghost" size="sm" className="w-full justify-start text-sm">
-              <Link href="/workspace/create">Create New Workspace</Link>
+              <Link prefetch href="/workspace/create">
+                Create New Workspace
+              </Link>
             </Button>
           </div>
         </Command>

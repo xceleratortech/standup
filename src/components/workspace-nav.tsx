@@ -5,11 +5,11 @@ import WorkspaceSettingsDialog from './workspace-settings-dialog';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import UserProfileMenu from './user-profile-menu';
-import Link from 'next/link';
 import { ChevronRight, CassetteTape, Menu, Cog, Mic } from 'lucide-react';
 import VoiceIdentityDialog from './voice-identity-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
+import { Link } from './ui/link';
 
 interface BreadcrumbItem {
   label: string;
@@ -60,7 +60,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
       <div className="container mx-auto flex max-w-screen-2xl items-center justify-between">
         {/* Logo - visible on all screen sizes */}
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2">
+          <Link prefetch href="/" className="flex items-center gap-2">
             <CassetteTape className="h-6 w-6 text-blue-500" />
             <span className="text-lg font-semibold">Standup</span>
           </Link>
@@ -80,6 +80,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                       {index > 0 && <ChevronRight className="text-muted-foreground mx-1 h-4 w-4" />}
                       <Link
                         href={item.href}
+                        prefetch
                         aria-current={item.current ? 'page' : undefined}
                         className={`text-sm ${item.current ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
                       >
@@ -167,6 +168,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                               >
                                 <Link
                                   href={item.href}
+                                  prefetch
                                   aria-current={item.current ? 'page' : undefined}
                                 >
                                   {item.label}
