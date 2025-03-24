@@ -44,7 +44,8 @@ function UserProfileMenu({ user }: UserProfileMenuProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push('/');
+    window.location.href = '/';
+    window.location.reload();
   };
 
   const handleImageError = () => {
