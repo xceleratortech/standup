@@ -68,6 +68,11 @@ function WorkspaceSettingsDialog({
     name: string;
   } | null>(null);
 
+  // Determine if the current user is an admin
+  const isCurrentUserAdmin = members.some(
+    (member) => member.userId === currentUserId && member.role === 'admin'
+  );
+
   const handleMemberAction = async () => {
     if (!selectedAction) return;
 
@@ -274,20 +279,16 @@ function WorkspaceSettingsDialog({
           </div>
 
           {/* Actions Section with sticky footer */}
-          <div className="bg-background flex items-center justify-between border-t px-6 py-4">
-            <Button asChild variant="outline" size="sm" className="h-8 text-xs">
-              <Link href={`/workspace/${workspace.id}/invites`}>
-                <UserPlus className="mr-1 h-3 w-3" />
-                Invite Members
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="h-8 text-xs">
-              <Link href={`/workspace/${workspace.id}/settings`}>
-                <Settings className="mr-1 h-3 w-3" />
-                Advanced Settings
-              </Link>
-            </Button>
-          </div>
+          {isCurrentUserAdmin && (
+            <div className="bg-background flex items-center justify-center border-t px-6 py-4">
+              <Button asChild variant="outline" size="sm" className="h-8 text-xs">
+                <Link href={`/workspace/${workspace.id}/invites`}>
+                  <UserPlus className="mr-1 h-3 w-3" />
+                  Invite Members
+                </Link>
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

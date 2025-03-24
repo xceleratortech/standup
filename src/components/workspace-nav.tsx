@@ -57,7 +57,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
 
   return (
     <div className="flex w-full items-center justify-center p-2 md:p-0">
-      <div className="container mx-auto flex max-w-screen-xl items-center justify-between">
+      <div className="container mx-auto flex max-w-screen-2xl items-center justify-between">
         {/* Logo - visible on all screen sizes */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">

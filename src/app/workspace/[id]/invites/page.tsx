@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import DeleteInviteButton from './delete-button';
 import WorkspaceNav from '@/components/workspace-nav';
+import CopyLinkButton from './copy-button';
 
 function LoadingInvites() {
   return (
@@ -72,15 +73,7 @@ async function InvitesData({ params }: { params: { id: string } }) {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(invite.inviteUrl);
-                    }}
-                  >
-                    Copy Link
-                  </Button>
+                  <CopyLinkButton inviteUrl={invite.inviteUrl} />
                   <DeleteInviteButton inviteId={invite.id} workspaceId={params.id} />
                 </div>
               </div>
