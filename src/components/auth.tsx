@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/card';
 import { SignUp } from '@/components/sign-up';
 import SignIn from './sign-in';
+import { CassetteTape } from 'lucide-react';
+import { Link } from '@/components/ui/link';
 
 export function Authenticate() {
   const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>('login');
@@ -47,10 +49,17 @@ export function Authenticate() {
   };
 
   return (
-    <Card className="overflow-hidden pb-0">
-      <CardHeader>
-        <CardTitle>Authentication</CardTitle>
-        <CardDescription>Sign in or create an account to get started</CardDescription>
+    <Card className="gap-4 overflow-hidden pb-0">
+      <CardHeader className="space-y-1">
+        <div className="flex items-center gap-2">
+          <CassetteTape className="h-8 w-8 text-blue-500" />
+          <span className="text-2xl font-semibold">Standup</span>
+        </div>
+
+        <div>
+          <CardTitle>Authentication</CardTitle>
+          <CardDescription>Sign in or create an account to get started</CardDescription>
+        </div>
       </CardHeader>
 
       <Tabs
