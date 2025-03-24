@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Loader2,
   RefreshCw,
+  MoreVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -498,7 +499,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2">
             <FilePlus className="h-5 w-5" />
             Recordings
@@ -511,6 +512,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                   variant="outline"
                   size="sm"
                   disabled={isGeneratingTranscriptions || recordings.length === 0}
+                  className="h-8 w-full sm:w-auto"
                 >
                   {isGeneratingTranscriptions ? (
                     <>
@@ -572,60 +574,92 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                 {/* Clickable header */}
                 <div
                   className={cn(
-                    'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-3 transition-colors',
+                    'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 p-3 transition-colors',
                     expandedRecordings[recording.id] && 'rounded-b-none'
                   )}
                   onClick={() => toggleExpand(recording.id)}
                 >
-                  <div className="flex items-center gap-2">
-                    {/* <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={(e) => togglePlay(e, recording.id)}
-                      aria-label={playing === recording.id ? 'Pause' : 'Play'}
-                    >
-                      {playing === recording.id ? (
-                        <Pause className="text-primary h-4 w-4" />
-                      ) : (
-                        <Play className="h-4 w-4" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {recording.recordingName || 'Unnamed Recording'}
+                    </p>
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
+                      <span>{formatDuration(recording.duration, recording.durationSeconds)}</span>
+                      <span className="xs:inline hidden">•</span>
+                      <span className="truncate">
+                        {formatDistanceToNow(new Date(recording.createdAt), {
+                          addSuffix: true,
+                        })}
+                      </span>
+                      {recording.transcriptionGeneratedAt && (
+                        <>
+                          <span className="xs:inline hidden">•</span>
+                          <span className="flex items-center gap-1 text-xs">
+                            <RefreshCw className="h-3 w-3" />
+                            <span className="hidden sm:inline">Transcript </span>
+                            {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        </>
                       )}
-                    </Button> */}
-
-                    <div>
-                      <p className="font-medium">
-                        {recording.recordingName || 'Unnamed Recording'}
-                      </p>
-                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                        <span>{formatDuration(recording.duration, recording.durationSeconds)}</span>
-                        <span>•</span>
-                        <span>
-                          {formatDistanceToNow(new Date(recording.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </span>
-                        {recording.transcriptionGeneratedAt && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1 text-xs">
-                              <RefreshCw className="h-3 w-3" />
-                              Transcript{' '}
-                              {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </>
-                        )}
-                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="ml-2 flex shrink-0 items-center gap-1">
+                    {/* Mobile view menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild className="sm:hidden">
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(e, recording.id);
+                          }}
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download
+                        </DropdownMenuItem>
+                        {canEdit && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRegenerateTranscription(e, recording.id);
+                              }}
+                              disabled={regeneratingIds[recording.id]}
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  regeneratingIds[recording.id] && 'animate-spin'
+                                )}
+                              />
+                              Regenerate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(e, recording.id);
+                              }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Desktop view buttons */}
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={(e) => handleDownload(e, recording.id)}
-                      className="h-8 w-8"
+                      className="hidden h-8 w-8 sm:flex"
                       title="Download recording"
                     >
                       <Download className="h-4 w-4" />
@@ -637,7 +671,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                           variant="ghost"
                           size="icon"
                           onClick={(e) => handleRegenerateTranscription(e, recording.id)}
-                          className="h-8 w-8"
+                          className="hidden h-8 w-8 sm:flex"
                           disabled={regeneratingIds[recording.id]}
                           title="Regenerate transcript"
                         >
@@ -653,7 +687,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                           variant="ghost"
                           size="icon"
                           onClick={(e) => confirmDelete(e, recording.id)}
-                          className="h-8 w-8"
+                          className="hidden h-8 w-8 sm:flex"
                           title="Delete recording"
                         >
                           <Trash2 className="text-destructive h-4 w-4" />
@@ -692,7 +726,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden rounded-b-md border border-t-0"
                     >
-                      <div className="p-3">
+                      <div className="p-2 sm:p-3">
                         {recording.transcription ? (
                           <Tabs
                             value={activeTab[recording.id] || 'audio'}
@@ -704,7 +738,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                             }
                             className="w-full"
                           >
-                            <TabsList className="mb-2">
+                            <TabsList className="mb-2 grid w-full grid-cols-2">
                               <TabsTrigger value="audio">Audio</TabsTrigger>
                               <TabsTrigger value="transcript">Transcript</TabsTrigger>
                             </TabsList>
@@ -726,7 +760,63 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                             </TabsContent>
 
                             <TabsContent value="transcript" className="mt-0">
-                              {renderTranscriptContent(recording)}
+                              <div className="flex flex-col space-y-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                  {recording.transcriptionGeneratedAt && (
+                                    <div className="text-muted-foreground mb-2 text-xs">
+                                      Transcript generated{' '}
+                                      {formatDistanceToNow(
+                                        new Date(recording.transcriptionGeneratedAt),
+                                        {
+                                          addSuffix: true,
+                                        }
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {canEdit && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingTranscript(recording.id);
+                                        setEditingSegmentIndex(undefined);
+                                      }}
+                                      className="mb-2 w-full sm:mb-0 sm:w-auto"
+                                    >
+                                      Edit Transcript
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {editingTranscript === recording.id ? (
+                                  <TranscriptEditor
+                                    meetingId={meetingId}
+                                    recordingId={recording.id}
+                                    transcription={recording.transcription || null}
+                                    onClose={() => {
+                                      setEditingTranscript(null);
+                                      setEditingSegmentIndex(undefined);
+                                    }}
+                                    highlightedSegmentIndex={editingSegmentIndex}
+                                  />
+                                ) : recording.transcription ? (
+                                  <RecordingTranscript
+                                    meetingId={meetingId}
+                                    transcription={recording.transcription}
+                                    audioUrl={recordingURLs[recording.id]}
+                                    currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
+                                    onPlaySegment={(timeInSeconds) =>
+                                      handlePlaySegment(recording.id, timeInSeconds)
+                                    }
+                                    canEdit={canEdit}
+                                    onEditSegment={(segmentIndex) => {
+                                      setEditingTranscript(recording.id);
+                                      setEditingSegmentIndex(segmentIndex);
+                                    }}
+                                  />
+                                ) : null}
+                              </div>
                             </TabsContent>
                           </Tabs>
                         ) : (

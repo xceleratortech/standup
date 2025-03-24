@@ -172,35 +172,37 @@ export default function RecordingTranscript({
                   else segmentRefs.current.delete(index);
                 }}
               >
-                <div className="text-muted-foreground w-16 flex-shrink-0 pt-1 text-xs">
-                  {segment.timestamp}
-                </div>
+                <div className="mr-2">
+                  <div className="text-muted-foreground flex-shrink-0 text-xs">
+                    {segment.timestamp}
+                  </div>
 
-                <div className="flex gap-1">
-                  {onPlaySegment && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={() => onPlaySegment(timestampToSeconds(segment.timestamp))}
-                      disabled={!audioUrl}
-                      aria-label={`Play from ${segment.timestamp}`}
-                    >
-                      <Play className="h-3 w-3" />
-                    </Button>
-                  )}
+                  <div className="flex gap-1">
+                    {onPlaySegment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={() => onPlaySegment(timestampToSeconds(segment.timestamp))}
+                        disabled={!audioUrl}
+                        aria-label={`Play from ${segment.timestamp}`}
+                      >
+                        <Play className="h-3 w-3" />
+                      </Button>
+                    )}
 
-                  {canEdit && onEditSegment && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={() => onEditSegment(index)}
-                      aria-label={`Edit segment at ${segment.timestamp}`}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
+                    {canEdit && onEditSegment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={() => onEditSegment(index)}
+                        aria-label={`Edit segment at ${segment.timestamp}`}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex-1">
