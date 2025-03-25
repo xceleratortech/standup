@@ -718,11 +718,17 @@ export function RecordingControls({
       setUploadError(null);
 
       // Get upload URL
-      const { uploadUrl, fileKey } = await getRecordingUploadUrl({
+      const urlRes = await getRecordingUploadUrl({
         meetingId: selectedMeetingId,
         fileName: `recording-${Date.now()}.mp3`,
         contentType: 'audio/mp3',
       });
+
+      if (!urlRes.data) {
+        throw new Error('Failed to get upload URL');
+      }
+      const uploadUrl = urlRes.data.uploadUrl;
+      const fileKey = urlRes.data.fileKey;
 
       // Upload the recording
       const xhr = new XMLHttpRequest();
@@ -836,11 +842,18 @@ export function RecordingControls({
       const filename = `recording-${Date.now()}.mp3`;
 
       // Get a signed upload URL
-      const { uploadUrl, fileKey } = await getRecordingUploadUrl({
+      const urlRes = await getRecordingUploadUrl({
         meetingId: selectedMeetingId,
         fileName: filename,
         contentType: selectedDraft.blob.type,
       });
+
+      if (!urlRes.data) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const uploadUrl = urlRes.data.uploadUrl;
+      const fileKey = urlRes.data.fileKey;
 
       router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
 

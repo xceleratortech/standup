@@ -15,7 +15,7 @@ import {
   updateMeetingOutcome,
 } from '@/lib/actions/meeting-outcomes';
 import { getMeetingParticipants, removeParticipant } from '@/lib/actions/meeting-participants';
-import { getWorkspaceMeetings, createMeeting } from '@/lib/actions/meeting';
+import { getWorkspaceMeetings, createMeeting, getMeeting } from '@/lib/actions/meeting';
 import { toast } from 'sonner';
 
 import {
@@ -26,11 +26,29 @@ import {
 import { getVoiceIdentityUrl, getUserVoiceIdentity } from '@/lib/actions/workspace';
 import { useMemo } from 'react';
 
+// Helper function to handle structured responses with proper type handling for different response formats
+function extractData<T>(response: { data?: T; error?: string } | undefined): T | undefined {
+  if (!response) return undefined;
+  if ('error' in response && response.error) {
+    console.error('Error in server action:', response.error);
+    return undefined;
+  }
+  if ('data' in response) {
+    return response.data;
+  }
+  return undefined;
+}
+
 // --- Recording hooks ---
 export function useMeetingRecordings(meetingId: string) {
   return useQuery({
     queryKey: ['recordings', meetingId],
-    queryFn: () => getMeetingRecordings(meetingId),
+    queryFn: async () => {
+      const response = await getMeetingRecordings(meetingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get recordings');
+      return data;
+    },
   });
 }
 
@@ -38,7 +56,12 @@ export function useDeleteRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (recordingId: string) => deleteRecording(recordingId),
+    mutationFn: async (recordingId: string) => {
+      const response = await deleteRecording(recordingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to delete recording');
+      return data;
+    },
     onSuccess: (_, recordingId) => {
       toast.success('Recording deleted');
       // Update the recordings list
@@ -65,25 +88,10 @@ const urlCache = new Map<string, { url: string; expiry: number }>();
 export function useRecordingDownloadUrl() {
   return useMutation({
     mutationFn: async (recordingId: string) => {
-      // Check if we have a cached URL that's not expired
-      const cached = urlCache.get(recordingId);
-      const now = Date.now();
-
-      // If we have a valid cached URL (expiring more than 5 minutes from now)
-      if (cached && cached.expiry > now + 5 * 60 * 1000) {
-        return { downloadUrl: cached.url };
-      }
-
-      // Otherwise fetch a new URL
-      const result = await getRecordingDownloadUrl(recordingId);
-
-      // Cache the URL with expiry time (default 1 hour/3600 seconds from S3.ts)
-      urlCache.set(recordingId, {
-        url: result.downloadUrl,
-        expiry: now + 3600 * 1000, // 1 hour in milliseconds
-      });
-
-      return result;
+      const response = await getRecordingDownloadUrl(recordingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get download URL');
+      return data.downloadUrl;
     },
   });
 }
@@ -102,16 +110,19 @@ export function useVoiceIdentityDownloadUrl() {
       }
 
       // Fetch a new URL
-      const result = await getVoiceIdentityUrl(fileKey);
+      const response = await getVoiceIdentityUrl(fileKey);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get voice identity URL');
+
       const expiry = 3600;
 
       // Cache the URL with expiry time (default 1 hour/3600 seconds from S3.ts)
       urlCache.set(fileKey, {
-        url: result.downloadUrl,
+        url: data.downloadUrl,
         expiry: now + expiry * 1000, // expiry time in milliseconds
       });
 
-      return result;
+      return { downloadUrl: data.downloadUrl };
     },
   });
 }
@@ -132,7 +143,12 @@ export function useVoiceIdentityOperations() {
 export function useVoiceIdentities(workspaceId: string, userId?: string) {
   return useQuery({
     queryKey: ['voiceIdentities', workspaceId, userId],
-    queryFn: () => getUserVoiceIdentity({ workspaceId, userId }),
+    queryFn: async () => {
+      const response = await getUserVoiceIdentity({ workspaceId, userId });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get voice identities');
+      return data;
+    },
     enabled: !!workspaceId,
   });
 }
@@ -141,7 +157,12 @@ export function useVoiceIdentities(workspaceId: string, userId?: string) {
 export function useMeetingOutcomes(meetingId: string) {
   return useQuery({
     queryKey: ['outcomes', meetingId],
-    queryFn: () => getMeetingOutcomes(meetingId),
+    queryFn: async () => {
+      const response = await getMeetingOutcomes(meetingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get meeting outcomes');
+      return data;
+    },
   });
 }
 
@@ -149,7 +170,12 @@ export function useDeleteOutcome() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (outcomeId: string) => deleteMeetingOutcome(outcomeId),
+    mutationFn: async (outcomeId: string) => {
+      const response = await deleteMeetingOutcome(outcomeId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to delete outcome');
+      return data;
+    },
     onSuccess: (_, outcomeId) => {
       toast.success('Outcome deleted');
 
@@ -179,7 +205,10 @@ export function useUpdateOutcome() {
       type?: string;
       content?: string;
     }) => {
-      return await updateMeetingOutcome({ outcomeId, type, content });
+      const response = await updateMeetingOutcome({ outcomeId, type, content });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to update outcome');
+      return data;
     },
     onSuccess: () => {
       // Invalidate all meeting outcomes queries to refresh data
@@ -193,7 +222,7 @@ export function useGenerateOutcome(meetingId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       outcomeType,
       additionalPrompt,
       focusParticipantId,
@@ -201,9 +230,19 @@ export function useGenerateOutcome(meetingId: string) {
       outcomeType: 'summary' | 'actions';
       additionalPrompt?: string;
       focusParticipantId?: string;
-    }) => generateMeetingOutcome({ meetingId, outcomeType, additionalPrompt, focusParticipantId }),
-    onSuccess: (newOutcome: any) => {
-      toast.success(`${newOutcome.type} generated successfully`);
+    }) => {
+      const response = await generateMeetingOutcome({
+        meetingId,
+        outcomeType,
+        additionalPrompt,
+        focusParticipantId,
+      });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to generate outcome');
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`${data.type} generated successfully`);
 
       // Update the outcomes list
       queryClient.invalidateQueries({
@@ -221,7 +260,12 @@ export function useGenerateOutcome(meetingId: string) {
 export function useMeetingParticipants(meetingId: string) {
   return useQuery({
     queryKey: ['participants', meetingId],
-    queryFn: () => getMeetingParticipants(meetingId),
+    queryFn: async () => {
+      const response = await getMeetingParticipants(meetingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get participants');
+      return data;
+    },
   });
 }
 
@@ -229,8 +273,12 @@ export function useRemoveParticipant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ meetingId, userId }: { meetingId: string; userId: string }) =>
-      removeParticipant({ meetingId, userId }),
+    mutationFn: async ({ meetingId, userId }: { meetingId: string; userId: string }) => {
+      const response = await removeParticipant({ meetingId, userId });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to remove participant');
+      return data;
+    },
     onSuccess: (_, { meetingId, userId }) => {
       toast.success('Participant removed');
 
@@ -251,10 +299,29 @@ export function useRemoveParticipant() {
 }
 
 // --- Meeting hooks ---
+export function useMeeting(meetingId: string | undefined) {
+  return useQuery({
+    queryKey: ['meeting', meetingId],
+    queryFn: async () => {
+      if (!meetingId) throw new Error('Meeting ID is required');
+      const response = await getMeeting(meetingId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get meeting');
+      return data;
+    },
+    enabled: !!meetingId,
+  });
+}
+
 export function useWorkspaceMeetings(workspaceId: string) {
   return useQuery({
     queryKey: ['meetings', workspaceId],
-    queryFn: () => getWorkspaceMeetings(workspaceId),
+    queryFn: async () => {
+      const response = await getWorkspaceMeetings(workspaceId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get workspace meetings');
+      return data;
+    },
     enabled: !!workspaceId,
   });
 }
@@ -263,12 +330,17 @@ export function useCreateMeeting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (meetingData: {
+    mutationFn: async (meetingData: {
       workspaceId: string;
       title: string;
       description?: string;
       startTime?: Date;
-    }) => createMeeting(meetingData),
+    }) => {
+      const response = await createMeeting(meetingData);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to create meeting');
+      return data;
+    },
     onSuccess: (newMeeting) => {
       toast.success('Meeting created');
 
@@ -288,7 +360,12 @@ export function useCreateMeeting() {
 export function useWorkspaceMembers(workspaceId: string) {
   return useQuery({
     queryKey: ['workspace-members', workspaceId],
-    queryFn: () => getWorkspaceMembers(workspaceId),
+    queryFn: async () => {
+      const response = await getWorkspaceMembers(workspaceId);
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to get workspace members');
+      return data;
+    },
     enabled: !!workspaceId,
   });
 }
@@ -297,7 +374,7 @@ export function useUpdateMemberRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       workspaceId,
       userId,
       newRole,
@@ -305,7 +382,12 @@ export function useUpdateMemberRole() {
       workspaceId: string;
       userId: string;
       newRole: string;
-    }) => updateMemberRole({ workspaceId, userId, newRole }),
+    }) => {
+      const response = await updateMemberRole({ workspaceId, userId, newRole });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to update member role');
+      return data;
+    },
     onSuccess: (_, { workspaceId }) => {
       toast.success('Member role updated');
       queryClient.invalidateQueries({
@@ -323,8 +405,12 @@ export function useRemoveMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workspaceId, userId }: { workspaceId: string; userId: string }) =>
-      removeMember({ workspaceId, userId }),
+    mutationFn: async ({ workspaceId, userId }: { workspaceId: string; userId: string }) => {
+      const response = await removeMember({ workspaceId, userId });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to remove member');
+      return data;
+    },
     onSuccess: (_, { workspaceId }) => {
       toast.success('Member removed');
       queryClient.invalidateQueries({
@@ -339,15 +425,22 @@ export function useRemoveMember() {
 }
 
 // --- Transcription generation hook ---
-export function useGenerateTranscriptions(meetingId: string) {
+export function useGenerateTranscriptions(meetingId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (forceRegenerate: boolean = false) =>
-      generateMissingTranscriptions(meetingId, forceRegenerate),
-    onSuccess: (result) => {
-      if (result.updated > 0) {
-        toast.success(`Generated ${result.updated} transcriptions`);
+    mutationFn: async (forceRegenerate: boolean = false) => {
+      if (!meetingId) throw new Error('Meeting ID is required');
+      const response = await generateMissingTranscriptions(meetingId, forceRegenerate);
+      // Handle the specific response format from the transcription generation
+      if ('error' in response && response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data && data.updated > 0) {
+        toast.success(`Generated ${data.updated} transcriptions`);
 
         // Invalidate recordings query to reload with new transcriptions
         queryClient.invalidateQueries({
@@ -367,18 +460,21 @@ export function useRegenerateRecordingTranscription(meetingId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (recordingId: string) => regenerateRecordingTranscription(recordingId),
-    onSuccess: (result) => {
+    mutationFn: async (recordingId: string) => {
+      const response = await regenerateRecordingTranscription(recordingId);
+      // Handle the specific response format
+      if ('error' in response && response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: (data) => {
       toast.success('Transcription regenerated successfully');
 
-      // First, get the recording to find its meetingId
-      if (result && result.recordingId) {
-        // Instead of just invalidating all recordings, we can be more specific
-        // This will force a refetch of the recordings for the specific meeting
-        queryClient.invalidateQueries({
-          queryKey: ['recordings', meetingId], // This covers all recordings queries
-        });
-      }
+      // This will force a refetch of the recordings for the specific meeting
+      queryClient.invalidateQueries({
+        queryKey: ['recordings', meetingId],
+      });
     },
     onError: (error) => {
       console.error('Failed to regenerate transcription:', error);
@@ -391,10 +487,17 @@ export function useRegenerateRecordingTranscription(meetingId: string) {
 export function triggerTranscriptionGeneration(meetingId: string, queryClient: any) {
   // Call the server action directly
   generateMissingTranscriptions(meetingId)
-    .then((result) => {
-      if (result.updated > 0) {
+    .then((response) => {
+      // Check for error before accessing data
+      if ('error' in response && response.error) {
+        console.error('Failed to generate transcriptions:', response.error);
+        return;
+      }
+
+      const data = response.data;
+      if (data && data.updated > 0) {
         // Only show toast if transcriptions were actually generated
-        toast.success(`Generated ${result.updated} transcriptions`);
+        toast.success(`Generated ${data.updated} transcriptions`);
 
         // Refresh recordings to show the new transcriptions
         queryClient.invalidateQueries({
@@ -409,7 +512,7 @@ export function triggerTranscriptionGeneration(meetingId: string, queryClient: a
 
 // --- Transcription speaker identification hook ---
 export function useTranscriptSpeakers(meetingId: string, transcription: string | null | undefined) {
-  const { data: participants = [] } = useMeetingParticipants(meetingId);
+  const participantsQuery = useMeetingParticipants(meetingId);
 
   // Process transcript to identify speakers and match with participants
   const speakerMap = useMemo(() => {
@@ -424,7 +527,9 @@ export function useTranscriptSpeakers(meetingId: string, transcription: string |
       }
     >();
 
-    if (!transcription) return result;
+    if (!transcription || !participantsQuery.data) return result;
+
+    const participants = participantsQuery.data;
 
     try {
       // Parse the transcript JSON
@@ -455,7 +560,7 @@ export function useTranscriptSpeakers(meetingId: string, transcription: string |
         if (isEmail) {
           // Look for matching participant by email
           const matchingParticipant = participants.find(
-            (p) => p.email?.toLowerCase() === speakerKey.toLowerCase()
+            (p: { email: string }) => p.email.toLowerCase() === speakerKey.toLowerCase()
           );
 
           if (matchingParticipant) {
@@ -486,7 +591,7 @@ export function useTranscriptSpeakers(meetingId: string, transcription: string |
     }
 
     return result;
-  }, [transcription, participants]);
+  }, [transcription, participantsQuery.data]);
 
   return speakerMap;
 }
@@ -503,7 +608,10 @@ export function useUpdateRecordingTranscriptionJson(meetingId: string) {
       recordingId: string;
       transcript: Transcript;
     }) => {
-      return updateRecordingTranscriptionJson({ recordingId, transcript });
+      const response = await updateRecordingTranscriptionJson({ recordingId, transcript });
+      const data = extractData(response);
+      if (!data) throw new Error(response?.error || 'Failed to update transcription');
+      return data;
     },
     onSuccess: () => {
       // Invalidate and refetch the recordings
@@ -515,4 +623,19 @@ export function useUpdateRecordingTranscriptionJson(meetingId: string) {
       toast.error(`Failed to update transcript: ${error.message}`);
     },
   });
+}
+
+// Find a participant by email with proper typing
+export function useFindParticipantByEmail(
+  email: string | undefined,
+  participants:
+    | Array<{ userId: string; role: string; name: string; email: string; image: string | null }>
+    | undefined
+) {
+  return useMemo(() => {
+    if (!email || !participants || !Array.isArray(participants)) return undefined;
+    return participants.find(
+      (p: { email: string }) => p.email.toLowerCase() === email.toLowerCase()
+    );
+  }, [email, participants]);
 }

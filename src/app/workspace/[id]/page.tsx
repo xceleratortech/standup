@@ -42,7 +42,7 @@ async function WorkspaceData({ params }: { params: { id: string } }) {
       </div>
 
       <div className="relative min-h-[300px]">
-        {meetings.length === 0 ? (
+        {meetings.data?.length === 0 ? (
           <div className="flex h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
             <h3 className="text-lg font-semibold">No meetings yet</h3>
             <p className="text-muted-foreground mt-2">
@@ -50,7 +50,7 @@ async function WorkspaceData({ params }: { params: { id: string } }) {
             </p>
           </div>
         ) : (
-          <MeetingsList meetings={meetings} workspaceId={params.id} />
+          <MeetingsList meetings={meetings.data || []} workspaceId={params.id} />
         )}
       </div>
     </div>

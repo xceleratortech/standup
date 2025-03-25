@@ -63,10 +63,10 @@ export default function CreateMeetingButton({
         try {
           setIsLoadingMembers(true);
           const workspaceMembers = await getWorkspaceMembers(workspaceId);
-          setMembers(workspaceMembers);
+          setMembers(workspaceMembers.data || []);
 
           // Auto-select current user
-          const currentUser = workspaceMembers.find((member) => member.isCurrentUser);
+          const currentUser = workspaceMembers.data?.find((member) => member.isCurrentUser);
           if (currentUser) {
             setSelectedParticipants([currentUser.userId]);
           }
@@ -109,7 +109,7 @@ export default function CreateMeetingButton({
       } else {
         router.refresh();
         toast.success('Meeting created successfully');
-        router.push(`/workspace/${workspaceId}/meeting/${newMeeting.id}`);
+        router.push(`/workspace/${workspaceId}/meeting/${newMeeting.data?.id}`);
       }
     } catch (error) {
       console.error('Error creating meeting:', error);

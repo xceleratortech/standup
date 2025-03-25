@@ -42,13 +42,14 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from '@/lib/auth-client';
 import { getVoiceSampleText } from '@/lib/config/voice-samples';
+import { userVoiceIdentity } from '@/lib/db/schema';
 
 type User = InferSelectModel<typeof user>;
 
 interface VoiceIdentityDialogProps {
   workspaceId: string;
   hasVoiceIdentity: boolean;
-  voiceIdentities?: any[];
+  voiceIdentities?: InferSelectModel<typeof userVoiceIdentity>[];
   className?: string;
   buttonVariant?: VariantProps<typeof buttonVariants>['variant'];
   buttonClassName?: string;
@@ -419,11 +420,17 @@ export default function VoiceIdentityDialog({
       const fileName = `voice-identity-${Date.now()}.mp3`;
 
       // Get a presigned upload URL using the server action
-      const { uploadUrl, fileKey } = await getVoiceIdentityUploadUrl({
+      const urlRes = await getVoiceIdentityUploadUrl({
         workspaceId,
         fileName,
         contentType: 'audio/mp3',
       });
+
+      if (!urlRes.data) {
+        throw new Error('Failed to get upload URL');
+      }
+      const uploadUrl = urlRes.data?.uploadUrl;
+      const fileKey = urlRes.data?.fileKey;
 
       // Upload the recording
       const xhr = new XMLHttpRequest();

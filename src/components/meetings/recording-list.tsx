@@ -126,7 +126,8 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
       } else {
         // If we don't have the URL yet, fetch it
         if (!recordingURLs[recordingId]) {
-          const { downloadUrl } = await getDownloadUrl(recordingId);
+          const downloadUrl = await getDownloadUrl(recordingId);
+
           setRecordingURLs((prev) => ({
             ...prev,
             [recordingId]: downloadUrl,
@@ -165,8 +166,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
       let downloadUrl = recordingURLs[recordingId];
 
       if (!downloadUrl) {
-        const result = await getDownloadUrl(recordingId);
-        downloadUrl = result.downloadUrl;
+        downloadUrl = await getDownloadUrl(recordingId);
 
         // Cache the URL
         setRecordingURLs((prev) => ({
@@ -288,7 +288,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
           [recordingId]: true,
         }));
 
-        const { downloadUrl } = await getDownloadUrl(recordingId);
+        const downloadUrl = await getDownloadUrl(recordingId);
         setRecordingURLs((prev) => ({
           ...prev,
           [recordingId]: downloadUrl,
@@ -334,7 +334,7 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
       toast.loading('Loading audio...');
 
       getDownloadUrl(recordingId)
-        .then(({ downloadUrl }) => {
+        .then((downloadUrl) => {
           toast.dismiss();
           setRecordingURLs((prev) => ({
             ...prev,

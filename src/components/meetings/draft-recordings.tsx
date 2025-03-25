@@ -106,11 +106,18 @@ export default function DraftRecordings({ meetingId, canEdit }: DraftRecordingsP
       const filename = `recording-${Date.now()}.mp3`;
 
       // Get a signed upload URL
-      const { uploadUrl, fileKey } = await getRecordingUploadUrl({
+      const urlRes = await getRecordingUploadUrl({
         meetingId,
         fileName: filename,
         contentType: selectedDraft.blob.type,
       });
+
+      if (!urlRes.data) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const uploadUrl = urlRes.data?.uploadUrl;
+      const fileKey = urlRes.data?.fileKey;
 
       // Upload the file
       await fetch(uploadUrl, {
@@ -130,7 +137,7 @@ export default function DraftRecordings({ meetingId, canEdit }: DraftRecordingsP
       });
 
       // Remove from drafts after successful addition
-      deleteDraftRecording(selectedDraft.id);
+      await deleteDraftRecording(selectedDraft.id);
 
       toast.dismiss();
       toast.success('Recording added to meeting');

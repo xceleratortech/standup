@@ -23,13 +23,13 @@ export default async function ManageMemberPage(props: {
     const workspace = await getWorkspace(params.id);
 
     // Only admins can manage members
-    if (workspace.role !== 'admin') {
+    if (workspace.data?.role !== 'admin') {
       redirect(`/workspace/${params.id}`);
     }
 
     // Get all members to find the one we're managing
     const members = await getWorkspaceMembers(params.id);
-    const member = members.find((m) => m.userId === params.userId);
+    const member = members.data?.find((m) => m.userId === params.userId);
 
     if (!member) {
       redirect(`/workspace/${params.id}`);
@@ -40,7 +40,7 @@ export default async function ManageMemberPage(props: {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Manage Team Member</h1>
-            <p className="text-muted-foreground">{workspace.name}</p>
+            <p className="text-muted-foreground">{workspace.data.name}</p>
           </div>
           <Button asChild variant="outline">
             <Link prefetch href={`/workspace/${params.id}`}>

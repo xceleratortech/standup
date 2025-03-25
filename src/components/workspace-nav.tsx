@@ -34,16 +34,16 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
 
   // Ensure workspace has all required non-optional properties
   const workspace = {
-    id: workspaceData.id || '',
-    name: workspaceData.name || '',
-    createdAt: workspaceData.createdAt || new Date(),
-    updatedAt: workspaceData.updatedAt || new Date(),
-    slug: workspaceData.slug || '',
-    creatorId: workspaceData.creatorId || '',
+    id: workspaceData.data?.id || '',
+    name: workspaceData.data?.name || '',
+    createdAt: workspaceData.data?.createdAt || new Date(),
+    updatedAt: workspaceData.data?.updatedAt || new Date(),
+    slug: workspaceData.data?.slug || '',
+    creatorId: workspaceData.data?.creatorId || '',
   };
 
   // Sort workspaces by creation date (newest first)
-  const sortedWorkspaces = [...userWorkspaces].sort((a, b) => {
+  const sortedWorkspaces = [...(userWorkspaces.data || [])].sort((a, b) => {
     return new Date(b.workspace.createdAt).getTime() - new Date(a.workspace.createdAt).getTime();
   });
 
@@ -56,7 +56,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
   }));
 
   // Determine if we need to draw attention to the voice ID button
-  const needsMoreVoiceSamples = !voiceIdentities || voiceIdentities.length < 3;
+  const needsMoreVoiceSamples = !voiceIdentities.data || voiceIdentities.data?.length < 3;
 
   return (
     <div className="flex w-full items-center justify-center p-2 md:p-0">
@@ -97,7 +97,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
 
             <WorkspaceSettingsDialog
               workspace={workspace}
-              members={members}
+              members={members.data || []}
               currentUserId={session?.user?.id || ''}
             />
           </div>
@@ -115,13 +115,13 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
             <div className="relative">
               <VoiceIdentityDialog
                 workspaceId={workspaceId}
-                hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
-                voiceIdentities={voiceIdentities}
+                hasVoiceIdentity={!!voiceIdentities.data && voiceIdentities.data.length > 0}
+                voiceIdentities={voiceIdentities.data}
                 buttonLabel={
                   <>
                     <Mic className="h-4 w-4" />
-                    {voiceIdentities && voiceIdentities.length > 0
-                      ? `Voice Samples (${voiceIdentities.length}/3)`
+                    {voiceIdentities.data && voiceIdentities.data.length > 0
+                      ? `Voice Samples (${voiceIdentities.data.length}/3)`
                       : 'Set Up Voice ID'}
                   </>
                 }
@@ -180,7 +180,7 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                       {/* Remove the direct link and use the dialog component properly */}
                       <WorkspaceSettingsDialog
                         workspace={workspace}
-                        members={members}
+                        members={members.data || []}
                         currentUserId={session?.user?.id || ''}
                         className="w-full"
                         buttonVariant="outline"
@@ -196,16 +196,18 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                       <div className="relative w-full">
                         <VoiceIdentityDialog
                           workspaceId={workspaceId}
-                          hasVoiceIdentity={voiceIdentities && voiceIdentities.length > 0}
-                          voiceIdentities={voiceIdentities}
+                          hasVoiceIdentity={
+                            !!voiceIdentities.data && voiceIdentities.data.length > 0
+                          }
+                          voiceIdentities={voiceIdentities.data}
                           className="w-full"
                           buttonVariant="outline"
                           buttonClassName={`w-full justify-start ${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
                           buttonLabel={
                             <>
                               <Mic className="mr-2 h-4 w-4" />
-                              {voiceIdentities && voiceIdentities.length > 0
-                                ? `Voice Samples (${voiceIdentities.length}/3)`
+                              {voiceIdentities.data && voiceIdentities.data.length > 0
+                                ? `Voice Samples (${voiceIdentities.data.length}/3)`
                                 : 'Set Up Voice ID'}
                             </>
                           }

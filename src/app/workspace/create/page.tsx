@@ -27,7 +27,7 @@ export default function CreateWorkspacePage() {
 
     try {
       const workspace = await createWorkspace({ name });
-      router.push(`/workspace/${workspace.id}`);
+      router.push(`/workspace/${workspace.data?.id}`);
     } catch (err) {
       setError((err as Error).message || 'Failed to create workspace');
     } finally {

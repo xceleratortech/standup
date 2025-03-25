@@ -39,7 +39,7 @@ async function InvitesData({ params }: { params: { id: string } }) {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Pending Invites</h1>
-          <p className="text-muted-foreground text-sm">{workspace.name}</p>
+          <p className="text-muted-foreground text-sm">{workspace.data?.name}</p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
@@ -56,7 +56,7 @@ async function InvitesData({ params }: { params: { id: string } }) {
       </div>
 
       <div className="rounded-lg border">
-        {invites.length === 0 ? (
+        {invites.data && invites.data.length === 0 ? (
           <div className="p-6 text-center">
             <p className="text-muted-foreground mb-4">No pending invites</p>
             <Button asChild size="sm">
@@ -65,7 +65,7 @@ async function InvitesData({ params }: { params: { id: string } }) {
           </div>
         ) : (
           <div className="divide-y">
-            {invites.map((invite) => (
+            {invites.data?.map((invite) => (
               <div key={invite.id} className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-medium">{invite.email || 'Invite Link'}</p>
@@ -103,12 +103,12 @@ export default async function WorkspaceInvitesPage(props: { params: Promise<{ id
     const workspace = await getWorkspace(params.id);
 
     // Only admins can view invites
-    if (workspace.role !== 'admin') {
+    if (workspace.data?.role !== 'admin') {
       redirect(`/workspace/${params.id}`);
     }
 
     const breadcrumbs = [
-      { label: workspace.name || 'Workspace', href: `/workspace/${params.id}` },
+      { label: workspace.data?.name || 'Workspace', href: `/workspace/${params.id}` },
       { label: 'Invites', href: `/workspace/${params.id}/invites`, current: true },
     ];
 

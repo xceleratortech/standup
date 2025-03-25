@@ -3,12 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Mic, FileText, Calendar, Users, Clock } from 'lucide-react';
 import { db } from '@/lib/db';
-import { meetingParticipant, meetingRecording } from '@/lib/db/schema';
+import { meeting, meetingParticipant, meetingRecording } from '@/lib/db/schema';
 import { eq, count } from 'drizzle-orm';
 import { Link } from '../ui/link';
 
 interface MeetingsListProps {
-  meetings: any[];
+  meetings: (typeof meeting.$inferSelect)[];
   workspaceId: string;
 }
 
@@ -107,13 +107,6 @@ export default async function MeetingsList({ meetings, workspaceId }: MeetingsLi
                       {participantCount !== 1 ? 's' : ''}
                     </span>
                   </div>
-
-                  {meeting.transcription && (
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      <span>Transcription available</span>
-                    </div>
-                  )}
                 </div>
               </CardContent>
               <div className="text-muted-foreground mt-2 border-t px-4 py-2 text-xs">

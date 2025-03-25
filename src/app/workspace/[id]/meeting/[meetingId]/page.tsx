@@ -56,98 +56,119 @@ async function MeetingData({ params }: { params: { id: string; meetingId: string
   });
 
   const isAdmin = userWorkspace?.role === 'admin';
-  const isCreator = meeting.createdById === userId;
+  const isCreator = meeting.data?.createdById === userId;
   const canEdit = isAdmin || isCreator;
 
   // Format dates for display
-  const startTimeFormatted = meeting.startTime
-    ? format(new Date(meeting.startTime), 'PPP p')
+  const startTimeFormatted = meeting.data?.startTime
+    ? format(new Date(meeting.data?.startTime), 'PPP p')
     : 'Not scheduled';
 
   const durationFormatted =
-    meeting.startTime && meeting.endTime
-      ? `${Math.round((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 60000)} minutes`
+    meeting.data?.startTime && meeting.data?.endTime
+      ? `${Math.round((new Date(meeting.data.endTime).getTime() - new Date(meeting.data.startTime).getTime()) / 60000)} minutes`
       : 'Unknown duration';
 
-  return (
-    <div className="space-y-2">
-      {/* Meeting Header */}
-      <div className="px-3">
-        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-2xl font-medium tracking-tight">{meeting.title}</h1>
-            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4" />
-              <span>{startTimeFormatted}</span>
-              {meeting.startTime && meeting.endTime && (
-                <>
-                  <span className="px-1">•</span>
-                  <Clock className="h-4 w-4" />
-                  <span>{durationFormatted}</span>
-                </>
-              )}
-              <span className="px-1">•</span>
-              <span>
-                Created{' '}
-                {formatDistanceToNow(new Date(meeting.createdAt), {
-                  addSuffix: true,
-                })}
-              </span>
+  if (!meeting) {
+    return (
+      <div className="flex h-48 w-full items-center justify-center">
+        <div className="flex flex-col items-center">
+          <p className="text-red-500">Meeting not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (meeting.error) {
+    return (
+      <div className="flex h-48 w-full items-center justify-center">
+        <div className="flex flex-col items-center">
+          <p className="text-red-500">{meeting.error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (meeting.data)
+    return (
+      <div className="space-y-2">
+        {/* Meeting Header */}
+        <div className="px-3">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <div>
+              <h1 className="text-2xl font-medium tracking-tight">{meeting.data?.title}</h1>
+              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4" />
+                <span>{startTimeFormatted}</span>
+                {meeting.data?.startTime && meeting.data?.endTime && (
+                  <>
+                    <span className="px-1">•</span>
+                    <Clock className="h-4 w-4" />
+                    <span>{durationFormatted}</span>
+                  </>
+                )}
+                <span className="px-1">•</span>
+                <span>
+                  Created{' '}
+                  {formatDistanceToNow(new Date(meeting.data?.createdAt || Date.now()), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </div>
             </div>
+
+            {canEdit && (
+              <div className="flex items-center gap-2">
+                <EditMeetingDialog
+                  meetingId={params.meetingId}
+                  initialTitle={meeting.data?.title}
+                  initialDescription={meeting.data?.description}
+                />
+                <DeleteMeetingDialog meetingId={params.meetingId} workspaceId={params.id} />
+              </div>
+            )}
           </div>
 
-          {canEdit && (
-            <div className="flex items-center gap-2">
-              <EditMeetingDialog
-                meetingId={params.meetingId}
-                initialTitle={meeting.title}
-                initialDescription={meeting.description}
-              />
-              <DeleteMeetingDialog meetingId={params.meetingId} workspaceId={params.id} />
-            </div>
+          {meeting.data.description && (
+            <p className="text-muted-foreground mt-4 text-sm">{meeting.data.description}</p>
           )}
         </div>
 
-        {meeting.description && (
-          <p className="text-muted-foreground mt-4 text-sm">{meeting.description}</p>
-        )}
-      </div>
+        <div className="grid grid-cols-1 gap-6 px-3 lg:grid-cols-3">
+          <div className="space-y-8 lg:col-span-2">
+            {/* Recordings Section */}
+            <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
 
-      <div className="grid grid-cols-1 gap-6 px-3 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
-          {/* Recordings Section */}
-          <RecordingList meetingId={params.meetingId} canEdit={canEdit} />
-
-          {/* Outcomes Section */}
-          <MeetingOutcomes
-            meetingId={params.meetingId}
-            canEdit={canEdit}
-            initialOutcomes={outcomes}
-            currentUserId={userId}
-          />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Recording Controls */}
-          <div className="overflow-hidden rounded-xl">
-            <RecordingControls
-              defaultSelectedMeetingId={params.meetingId}
-              workspaceId={params.id}
+            {/* Outcomes Section */}
+            <MeetingOutcomes
+              meetingId={params.meetingId}
+              canEdit={canEdit}
+              initialOutcomes={outcomes.data}
+              currentUserId={userId}
             />
           </div>
 
-          {/* Participants */}
-          <MeetingParticipants
-            meetingId={params.meetingId}
-            workspaceId={params.id}
-            canEdit={canEdit}
-            initialParticipants={participants}
-          />
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Recording Controls */}
+            <div className="overflow-hidden rounded-xl">
+              <RecordingControls
+                defaultSelectedMeetingId={params.meetingId}
+                workspaceId={params.id}
+              />
+            </div>
+
+            {/* Participants */}
+            <MeetingParticipants
+              meetingId={params.meetingId}
+              workspaceId={params.id}
+              canEdit={canEdit}
+              initialParticipants={participants.data}
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }
 
 export default async function MeetingPage(props: {
@@ -194,7 +215,7 @@ export default async function MeetingPage(props: {
         href: `/workspace/${params.id}`,
       },
       {
-        label: meeting.title,
+        label: meeting.data?.title || 'Meeting',
         href: `/workspace/${params.id}/meeting/${params.meetingId}`,
         current: true,
       },

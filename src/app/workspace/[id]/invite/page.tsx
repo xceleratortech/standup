@@ -46,8 +46,8 @@ export default function InviteMemberPage(props: { params: Promise<{ id: string }
         role,
       });
 
-      if (linkOnly) {
-        setInviteLink(invite.inviteUrl);
+      if (linkOnly && invite.data) {
+        setInviteLink(invite.data.inviteUrl);
       } else {
         router.push(`/workspace/${params.id}/invites`);
       }

@@ -22,8 +22,8 @@ export default async function Home() {
   const workspaces = await getUserWorkspaces();
 
   // If user has workspaces, redirect to the first one
-  if (workspaces.length > 0) {
-    redirect(`/workspace/${workspaces[0].workspace.id}`);
+  if (workspaces?.data?.length) {
+    redirect(`/workspace/${workspaces.data[0].workspace.id}`);
   }
 
   // If no workspaces, redirect to create workspace page
