@@ -57,16 +57,33 @@
 - **Node.js** (runtime)
 - **Bun** (package manager)
 - **Gemini API Access**
+- **Docker** and **Docker Compose** (optional, for local services)
+
+### Local Development Services
+
+The project includes a Docker Compose configuration that sets up:
+
+- PostgreSQL database
+- MinIO (S3-compatible object storage)
+
+To start these services:
+
+```bash
+# Start local development services
+docker-compose up -d
+```
+
+This will create a PostgreSQL database at `localhost:5432` and a MinIO instance at `localhost:9000` (API) and `localhost:9001` (Console UI), with all necessary credentials pre-configured in the .env.sample file.
 
 ### Environment Setup
 
-Copy the `.env.sample` file to `.env` and update the values with your own credentials:
+Copy the `.env.sample` file to `.env`:
 
 ```bash
 cp .env.sample .env
 ```
 
-For production deployments, configure these environment variables in your deployment platform.
+The sample configuration already contains the right settings to connect to the local Docker services. For production deployments, configure these environment variables in your deployment platform.
 
 ### Setup
 

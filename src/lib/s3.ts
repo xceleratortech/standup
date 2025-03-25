@@ -16,6 +16,7 @@ export const s3Client = new S3Client({
     accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
   },
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true', // Configurable via environment variable
 });
 
 export const S3_BUCKET = process.env.S3_BUCKET || 'standup';

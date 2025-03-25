@@ -1242,7 +1242,7 @@ export function RecordingControls({
                   </p>
                 </div>
 
-                <ScrollArea className="h-[300px] pr-4">
+                <ScrollArea className="h-[300px]">
                   <div className="space-y-3">
                     {/* Sort the draft recordings by creation time, newest first */}
                     {[...draftRecordings]
