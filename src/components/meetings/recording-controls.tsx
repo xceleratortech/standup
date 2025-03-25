@@ -8,7 +8,6 @@ import { useWorkspaceMeetings, useCreateMeeting } from '@/lib/hooks/use-queries'
 import { getRecordingUploadUrl, addMeetingRecording } from '@/lib/actions/meeting-recordings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -34,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '../ui/badge';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import CreateMeetingButton from '@/components/meetings/create-meeting-button';
+import CreateMeetingButton from '@/components/meetings/create-meeting-dialog';
 
 interface RecordingControlsProps {
   workspaceId: string;
@@ -955,22 +954,14 @@ export function RecordingControls({
         formatTime={formatTime}
       />
 
-      {/* Replace the old Create Meeting Dialog with CreateMeetingButton */}
-      <Dialog open={showMeetingCreateDialog} onOpenChange={setShowMeetingCreateDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Meeting</DialogTitle>
-            <DialogDescription>Create a new meeting to add your recording to.</DialogDescription>
-          </DialogHeader>
-          <CreateMeetingButton
-            workspaceId={workspaceId}
-            inline
-            onMeetingCreated={handleNewMeetingCreated}
-            autoOpenDialog={true}
-            onDialogClose={() => setShowMeetingCreateDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Use CreateMeetingButton with dialog-only mode for external state control */}
+      <CreateMeetingButton
+        workspaceId={workspaceId}
+        renderDialogOnly={true}
+        dialogOpen={showMeetingCreateDialog}
+        onDialogOpenChange={setShowMeetingCreateDialog}
+        onMeetingCreated={handleNewMeetingCreated}
+      />
 
       {/* Add Draft to Meeting Dialog */}
       <Dialog open={isAddingToMeeting} onOpenChange={setIsAddingToMeeting}>

@@ -26,6 +26,12 @@ interface CreateMeetingButtonProps {
   onMeetingCreated?: (meeting: any) => void;
   autoOpenDialog?: boolean;
   onDialogClose?: () => void;
+  renderOnlyContent?: boolean;
+
+  // New props for external dialog control
+  renderDialogOnly?: boolean;
+  dialogOpen?: boolean;
+  onDialogOpenChange?: (open: boolean) => void;
 }
 
 export default function CreateMeetingButton({
@@ -34,6 +40,12 @@ export default function CreateMeetingButton({
   onMeetingCreated,
   autoOpenDialog,
   onDialogClose,
+  renderOnlyContent = false,
+
+  // New props with defaults
+  renderDialogOnly = false,
+  dialogOpen,
+  onDialogOpenChange,
 }: CreateMeetingButtonProps) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(autoOpenDialog || false);
@@ -47,7 +59,7 @@ export default function CreateMeetingButton({
   // Load workspace members when dialog opens
   useEffect(() => {
     async function loadWorkspaceMembers() {
-      if (isDialogOpen && workspaceId) {
+      if ((isDialogOpen || renderOnlyContent) && workspaceId) {
         try {
           setIsLoadingMembers(true);
           const workspaceMembers = await getWorkspaceMembers(workspaceId);
@@ -68,7 +80,7 @@ export default function CreateMeetingButton({
     }
 
     loadWorkspaceMembers();
-  }, [isDialogOpen, workspaceId]);
+  }, [isDialogOpen, workspaceId, renderOnlyContent]);
 
   const handleCreateMeeting = async () => {
     if (!title.trim()) {
@@ -85,7 +97,13 @@ export default function CreateMeetingButton({
         participantIds: selectedParticipants.length > 0 ? selectedParticipants : undefined,
       });
 
-      setIsDialogOpen(false);
+      // Use external or internal state management based on props
+      if (renderDialogOnly && onDialogOpenChange) {
+        onDialogOpenChange(false);
+      } else {
+        setIsDialogOpen(false);
+      }
+
       if (onMeetingCreated) {
         onMeetingCreated(newMeeting);
       } else {
@@ -106,6 +124,13 @@ export default function CreateMeetingButton({
       onDialogClose();
     }
   }, [isDialogOpen, onDialogClose]);
+
+  // Update the internal dialog state when autoOpenDialog changes
+  useEffect(() => {
+    if (autoOpenDialog !== undefined) {
+      setIsDialogOpen(autoOpenDialog);
+    }
+  }, [autoOpenDialog]);
 
   const resetForm = () => {
     setTitle('');
@@ -169,35 +194,100 @@ export default function CreateMeetingButton({
     </div>
   );
 
-  if (inline) {
-    return (
-      <div className="space-y-4 py-4">
-        <div className="space-y-2">
-          <Label htmlFor="meeting-title">Meeting Title *</Label>
-          <Input
-            id="meeting-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter meeting title"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="meeting-description">Description (Optional)</Label>
-          <Textarea
-            id="meeting-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter meeting description"
-            rows={3}
-          />
-        </div>
-
-        {renderParticipantsSection()}
+  // Content of the form/dialog
+  const renderContent = () => (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="meeting-title">Meeting Title *</Label>
+        <Input
+          id="meeting-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Enter meeting title"
+        />
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="meeting-description">Description (Optional)</Label>
+        <Textarea
+          id="meeting-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter meeting description"
+          rows={3}
+        />
+      </div>
+
+      {renderParticipantsSection()}
+    </div>
+  );
+
+  // If we just want to render the dialog content directly
+  if (renderOnlyContent) {
+    return (
+      <>
+        {renderContent()}
+        <DialogFooter>
+          <Button variant="outline" onClick={onDialogClose} disabled={isCreating}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreateMeeting} disabled={isCreating}>
+            {isCreating ? 'Creating...' : 'Create Meeting'}
+          </Button>
+        </DialogFooter>
+      </>
     );
   }
 
+  // If we're rendering the form inline
+  if (inline) {
+    return (
+      <>
+        {renderContent()}
+        <DialogFooter>
+          <Button variant="outline" onClick={onDialogClose} disabled={isCreating}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreateMeeting} disabled={isCreating}>
+            {isCreating ? 'Creating...' : 'Create Meeting'}
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  }
+
+  // Option to render only the dialog with external state control
+  if (renderDialogOnly) {
+    return (
+      <Dialog open={dialogOpen} onOpenChange={onDialogOpenChange || (() => {})}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Meeting</DialogTitle>
+          </DialogHeader>
+
+          {renderContent()}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (onDialogOpenChange) onDialogOpenChange(false);
+                resetForm();
+              }}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateMeeting} disabled={isCreating}>
+              {isCreating ? 'Creating...' : 'Create Meeting'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Default behavior - render button + dialog
   return (
     <>
       <Button onClick={() => setIsDialogOpen(true)}>
@@ -209,7 +299,10 @@ export default function CreateMeetingButton({
         open={isDialogOpen}
         onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) resetForm();
+          if (!open) {
+            resetForm();
+            if (onDialogClose) onDialogClose();
+          }
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -217,30 +310,7 @@ export default function CreateMeetingButton({
             <DialogTitle>Create New Meeting</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="meeting-title">Meeting Title *</Label>
-              <Input
-                id="meeting-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter meeting title"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="meeting-description">Description (Optional)</Label>
-              <Textarea
-                id="meeting-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter meeting description"
-                rows={3}
-              />
-            </div>
-
-            {renderParticipantsSection()}
-          </div>
+          {renderContent()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isCreating}>

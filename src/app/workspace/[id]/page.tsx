@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { workspace, workspaceUser } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import WorkspaceRecordingControls from '@/components/meetings/workspace-recording-controls';
-import CreateMeetingButton from '@/components/meetings/create-meeting-button';
+import CreateMeetingButton from '@/components/meetings/create-meeting-dialog';
 
 function LoadingWorkspace() {
   return (
