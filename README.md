@@ -1,6 +1,6 @@
 <div align="center">
   <h1>STANDUP</h1>
-  <p>Have more organised IRL meetings. Replace your scrum with AI.</p>
+  <p>Have more organised IRL meetings. Replace your scrum master with AI.</p>
   
   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup.git&env=BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_APP_URL,RESEND_API_KEY,DATABASE_URL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY,S3_ENDPOINT,S3_BUCKET,S3_REGION,GEMINI_API_KEY&envDescription=Environment%20variables%20needed%20for%20the%20application&envLink=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup%2Fblob%2Fmain%2F.env.sample)
   
