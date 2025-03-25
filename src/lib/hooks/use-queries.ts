@@ -25,6 +25,7 @@ import {
 } from '@/lib/actions/workspace-members';
 import { getVoiceIdentityUrl, getUserVoiceIdentity } from '@/lib/actions/workspace';
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
 // Helper function to handle structured responses with proper type handling for different response formats
 function extractData<T>(response: { data?: T; error?: string } | undefined): T | undefined {
@@ -329,6 +330,8 @@ export function useWorkspaceMeetings(workspaceId: string) {
 export function useCreateMeeting() {
   const queryClient = useQueryClient();
 
+  const router = useRouter();
+
   return useMutation({
     mutationFn: async (meetingData: {
       workspaceId: string;
@@ -339,6 +342,7 @@ export function useCreateMeeting() {
       const response = await createMeeting(meetingData);
       const data = extractData(response);
       if (!data) throw new Error(response?.error || 'Failed to create meeting');
+      router.refresh();
       return data;
     },
     onSuccess: (newMeeting) => {
