@@ -202,11 +202,11 @@ function SaveRecordingDialog({
   recordingName: string;
   setRecordingName: (name: string) => void;
   onShowNewMeetingDialog: () => void;
-  meetings: Meeting[];
+  meetings: (Meeting | NewMeeting)[];
   isFetchingMeetings: boolean;
   selectedMeetingId: string | null;
   setSelectedMeetingId: (id: string) => void;
-  selectedMeeting: Meeting | undefined;
+  selectedMeeting: Meeting | NewMeeting | undefined;
   recordingTime: number;
   onSave: () => void;
   onUseLater: () => void;
@@ -280,14 +280,14 @@ function SaveRecordingDialog({
               </SelectContent>
             </Select>
 
-            {selectedMeeting && (
+            {selectedMeeting && 'createdAt' in selectedMeeting && selectedMeeting.createdAt ? (
               <p className="text-muted-foreground text-xs">
                 Created{' '}
                 {formatDistanceToNow(new Date(selectedMeeting.createdAt), {
                   addSuffix: true,
                 })}
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
@@ -378,6 +378,8 @@ function DraftItem({
   );
 }
 
+type NewMeeting = Omit<Meeting, 'createdAt'>;
+
 // Main component
 export function RecordingControls({
   workspaceId,
@@ -398,7 +400,7 @@ export function RecordingControls({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [existingMeetings, setExistingMeetings] = useState<Meeting[]>([]);
+  const [existingMeetings, setExistingMeetings] = useState<(Meeting | NewMeeting)[]>([]);
   const [showSavingDialog, setShowSavingDialog] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(
     defaultSelectedMeetingId || null
@@ -937,11 +939,10 @@ export function RecordingControls({
     setShowMeetingCreateDialog(false);
 
     // Update the meetings list
-    const formattedMeeting: Meeting = {
+    const formattedMeeting = {
       id: newMeeting.id,
       title: newMeeting.title,
       description: newMeeting.description,
-      createdAt: newMeeting.createdAt.toISOString(),
     };
     setExistingMeetings((prev) => [formattedMeeting, ...prev]);
   };
