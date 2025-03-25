@@ -2,7 +2,18 @@
   <h1>STANDUP</h1>
   <p>Have more organised IRL meetings. Replace your scrum master with AI.</p>
   
-  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup.git&env=BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_APP_URL,RESEND_API_KEY,DATABASE_URL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY,S3_ENDPOINT,S3_BUCKET,S3_REGION,GEMINI_API_KEY&envDescription=Environment%20variables%20needed%20for%20the%20application&envLink=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup%2Fblob%2Fmain%2F.env.sample)
+  <a href="https://standup.raj.how" target="_blank">
+    <img src="https://img.shields.io/badge/Try%20it%20now-standup.raj.how-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNhc3NldHRlLXRhcGUiPjxwYXRoIGQ9Ik0yIDE1LjVWMTdhMiAyIDAgMCAwIDIgMmgxNmEyIDIgMCAwIDAgMi0ydi0xLjVBMi41IDIuNSAwIDAgMCAyMC41IDEzaC0xN0EyLjUgMi41IDAgMCAwIDIgMTUuNVoiLz48cGF0aCBkPSJNMiA1YTIgMiAwIDAgMSAyLTJoMTZhMiAyIDAgMCAxIDIgMnYxMC41YTIuNSAyLjUgMCAwIDAtMiAyLjQ1di0xLjlhMS41IDEuNSAwIDAgMC0xLjUtMS41aC0xM0ExLjUgMS41IDAgMCAwIDQgMTZ2Mi4wNUEyLjUgMi41IDAgMCAwIDIgMTUuNVY1WiIvPjxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIzIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSI5IiByPSIzIi8+PHBhdGggZD0iTTYgMTNoMTIiLz48cGF0aCBkPSJNMiAyaDIwIi8+PC9zdmc+" alt="Try it now">
+  </a>
+  
+  <br />
+  <p>Or deploy it yourself</p>
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup.git&env=BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_APP_URL,RESEND_API_KEY,DATABASE_URL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY,S3_ENDPOINT,S3_BUCKET,S3_REGION,GEMINI_API_KEY&envDescription=Environment%20variables%20needed%20for%20the%20application&envLink=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup%2Fblob%2Fmain%2F.env.sample">
+    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
+  </a>
+  
+  <br />
+  <br />
   
   <a href="#key-features">Features</a> •
   <a href="#how-it-works">How It Works</a> •
