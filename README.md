@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <h1>STANDUP</h1>
+  <p>Have more organised IRL meetings. Replace your scrum with AI.</p>
+  
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup.git&env=BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_APP_URL,RESEND_API_KEY,DATABASE_URL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY,S3_ENDPOINT,S3_BUCKET,S3_REGION,GEMINI_API_KEY&envDescription=Environment%20variables%20needed%20for%20the%20application&envLink=https%3A%2F%2Fgithub.com%2Fxrehpicx%2Fstandup%2Fblob%2Fmain%2F.env.sample)
+  
+  <a href="#key-features">Features</a> •
+  <a href="#how-it-works">How It Works</a> •
+  <a href="#running-the-project-locally">Installation</a> •
+  <a href="#contribution">Contributing</a> •
+  <a href="#license">License</a>
+</div>
 
-## Getting Started
+---
 
-First, run the development server:
+## Key Features
+
+- **Meeting Outcomes**: Extract personalized action items and summaries for individual team members or the entire group
+- **Diarization**: Split audio into different speaker streams
+- **Voice Recognition**: Identify speakers by their voice patterns
+- **Auto Recordings Organization**: Auto-identify speakers in recordings and add them as meeting participants
+
+## How It Works
+
+1. **Create a Workspace**: Set up a shared space for your entire team
+2. **Invite Team Members**: Add all team members to your workspace - they'll need to set up their voice IDs
+3. **Voice ID Setup**: Each member completes a voice registration process to enable accurate recognition
+4. **Create Meetings**: Organize multiple meetings within your workspace
+5. **Add Participants**: Select a subset of workspace members as meeting participants to personalize outcomes
+6. **Record Meeting Audio**: Use the built-in recorder to capture discussions
+7. **Add Recordings to Meetings**: Each meeting can have multiple recordings that get transcribed
+8. **Generate Personalized Outcomes**: Create action items and summaries tailored to specific participants
+
+## Technology Stack
+
+- **Next.js 15**: React framework for the frontend
+- **Node.js**: Development runtime environment
+- **Bun**: Package manager
+- **Gemini**: AI service for diarization and voice recognition
+
+## Running the Project Locally
+
+### Prerequisites
+
+- **Node.js** (runtime)
+- **Bun** (package manager)
+- **Gemini API Access**
+
+### Environment Setup
+
+Copy the `.env.sample` file to `.env` and update the values with your own credentials:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+cp .env.sample .env
+```
+
+For production deployments, configure these environment variables in your deployment platform.
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/xrehpicx/standup.git
+cd standup
+
+# Install dependencies
+bun install
+
+# Run the development server
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000` to access the platform.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Roadmap
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Integration with Issue Trackers**: Connect with task management systems
+- **Auto Outcome Generation and Assignment**: Automatically assign action items to team members
 
-## Learn More
+## Contribution
 
-To learn more about Next.js, take a look at the following resources:
+We welcome contributions! Please follow these steps:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Released under the GPL-3.0 License. See `LICENSE` for more information.
