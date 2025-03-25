@@ -85,7 +85,7 @@ export async function createMeetingOutcome({
     })
     .returning();
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
   return outcome;
 }
 
@@ -214,7 +214,7 @@ export async function updateMeetingOutcome({
     .where(eq(meetingOutcome.id, outcomeId))
     .returning();
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${outcomeData.meetingId}`);
   return updatedOutcome;
 }
 
@@ -276,7 +276,7 @@ export async function deleteMeetingOutcome(outcomeId: string) {
   // Delete the outcome
   await db.delete(meetingOutcome).where(eq(meetingOutcome.id, outcomeId));
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${outcomeData.meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${outcomeData.meetingId}`);
   return { success: true };
 }
 

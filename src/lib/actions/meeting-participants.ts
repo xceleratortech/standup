@@ -80,7 +80,7 @@ export async function addMeetingParticipant({
     role,
   });
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
   return { success: true };
 }
 
@@ -186,7 +186,7 @@ export async function updateParticipantRole({
     })
     .where(and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)));
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
   return { success: true };
 }
 
@@ -237,6 +237,6 @@ export async function removeParticipant({
     .delete(meetingParticipant)
     .where(and(eq(meetingParticipant.meetingId, meetingId), eq(meetingParticipant.userId, userId)));
 
-  revalidatePath(`/workspaces/${meetingData.workspaceId}/meetings/${meetingId}`);
+  revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
   return { success: true };
 }

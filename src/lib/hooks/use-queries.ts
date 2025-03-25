@@ -24,7 +24,6 @@ import {
   removeMember,
 } from '@/lib/actions/workspace-members';
 import { getVoiceIdentityUrl, getUserVoiceIdentity } from '@/lib/actions/workspace';
-import { getDownloadExpiry } from '@/lib/s3';
 import { useMemo } from 'react';
 
 // --- Recording hooks ---
@@ -104,7 +103,7 @@ export function useVoiceIdentityDownloadUrl() {
 
       // Fetch a new URL
       const result = await getVoiceIdentityUrl(fileKey);
-      const expiry = getDownloadExpiry();
+      const expiry = 3600;
 
       // Cache the URL with expiry time (default 1 hour/3600 seconds from S3.ts)
       urlCache.set(fileKey, {

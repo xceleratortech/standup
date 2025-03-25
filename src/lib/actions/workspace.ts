@@ -47,7 +47,7 @@ export async function createWorkspace({ name }: { name: string }) {
     role: 'admin',
   });
 
-  revalidatePath('/workspaces');
+  revalidatePath('/workspace');
   return newWorkspace;
 }
 
@@ -149,7 +149,7 @@ export async function updateWorkspace({
     .where(eq(workspace.id, workspaceId))
     .returning();
 
-  revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspace/${workspaceId}`);
   return updatedWorkspace;
 }
 
@@ -177,7 +177,7 @@ export async function deleteWorkspace(workspaceId: string) {
   // Delete workspace (cascade will remove workspace users)
   await db.delete(workspace).where(eq(workspace.id, workspaceId));
 
-  revalidatePath('/workspaces');
+  revalidatePath('/workspace');
   return { success: true };
 }
 
@@ -244,7 +244,7 @@ export async function saveUserVoiceIdentity({
     })
     .returning();
 
-  revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspace/${workspaceId}`);
   return newSample;
 }
 
@@ -334,7 +334,7 @@ export async function deleteUserVoiceIdentitySample({
       )
     );
 
-  revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspace/${workspaceId}`);
   return { success: true };
 }
 
@@ -381,7 +381,7 @@ export async function deleteUserVoiceIdentity({
       )
     );
 
-  revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspace/${workspaceId}`);
   return { success: true };
 }
 

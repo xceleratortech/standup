@@ -370,7 +370,7 @@ export async function deleteMeeting(meetingId: string) {
       await tx.delete(meeting).where(eq(meeting.id, meetingId));
     });
 
-    revalidatePath('/workspace');
+    revalidatePath(`/workspace/${meetingData.workspaceId}`);
     return { success: true };
   } catch (error) {
     console.error('Error deleting meeting:', error);

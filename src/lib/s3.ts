@@ -41,10 +41,6 @@ export async function generateDownloadUrl(key: string, expiresIn = 3600) {
   return getSignedUrl(s3Client, command, { expiresIn });
 }
 
-export const getDownloadExpiry = () => {
-  return 3600;
-};
-
 // Generate a unique key for a file in S3
 export function generateFileKey(workspaceId: string, meetingId: string, fileName: string) {
   const timestamp = Date.now();

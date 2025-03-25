@@ -86,7 +86,7 @@ export async function updateMemberRole({
     })
     .where(and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)));
 
-  revalidatePath(`/workspaces/${workspaceId}/members`);
+  revalidatePath(`/workspace/${workspaceId}/members`);
   return { success: true };
 }
 
@@ -122,7 +122,7 @@ export async function removeMember({
     .delete(workspaceUser)
     .where(and(eq(workspaceUser.workspaceId, workspaceId), eq(workspaceUser.userId, userId)));
 
-  revalidatePath(`/workspaces/${workspaceId}/members`);
+  revalidatePath(`/workspace/${workspaceId}/members`);
   return { success: true };
 }
 
@@ -255,7 +255,7 @@ export async function acceptWorkspaceInvite(token: string) {
     })
     .where(eq(workspaceInvite.id, invite.id));
 
-  revalidatePath(`/workspaces/${invite.workspaceId}`);
+  revalidatePath(`/workspace/${invite.workspaceId}`);
   return { success: true, workspaceId: invite.workspaceId };
 }
 
@@ -325,6 +325,6 @@ export async function deleteWorkspaceInvite(inviteId: string) {
   // Delete the invite
   await db.delete(workspaceInvite).where(eq(workspaceInvite.id, inviteId));
 
-  revalidatePath(`/workspaces/${invite.workspaceId}/invites`);
+  revalidatePath(`/workspace/${invite.workspaceId}/members`);
   return { success: true };
 }
