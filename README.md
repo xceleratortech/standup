@@ -25,6 +25,12 @@
 
 ---
 
+## ⚠️ Alpha Stage Disclaimer
+
+**IMPORTANT**: This project is currently in **alpha stage**. While functional, you may encounter bugs, incomplete features, or unexpected behavior. I'm actively developing and improving the application, so please report any issues you encounter. Use in production environments at your own risk.
+
+---
+
 ## Key Features
 
 - **Meeting Outcomes**: Extract personalized action items and summaries for individual team members or the entire group
