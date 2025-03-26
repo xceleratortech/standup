@@ -1,9 +1,10 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import VoiceIdentityDialog from '@/components/voice-identity-dialog';
 import { useVoiceIdentities } from '@/lib/hooks/use-queries';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Link } from '@/components/ui/link';
 
 export function VoiceIdentitiesPanel({ workspaceId }: { workspaceId: string }) {
   const { data: voiceIdentities = [], isLoading } = useVoiceIdentities(workspaceId);
@@ -20,22 +21,16 @@ export function VoiceIdentitiesPanel({ workspaceId }: { workspaceId: string }) {
             Record voice samples to improve speaker recognition in transcriptions
           </CardDescription>
         </div>
-        <VoiceIdentityDialog
-          workspaceId={workspaceId}
-          hasVoiceIdentity={hasVoiceIdentities}
-          voiceIdentities={voiceIdentities}
-          buttonVariant="outline"
-          buttonLabel={
-            <>
-              {hasVoiceIdentities ? 'Manage' : 'Add'} Voice Samples
-              {samplesCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {samplesCount}/3
-                </Badge>
-              )}
-            </>
-          }
-        />
+        <Button variant="outline" asChild>
+          <Link href={`/workspace/${workspaceId}/voice-setup`}>
+            {hasVoiceIdentities ? 'Manage' : 'Add'} Voice Samples
+            {samplesCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {samplesCount}/3
+              </Badge>
+            )}
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="text-muted-foreground text-sm">

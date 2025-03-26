@@ -8,8 +8,12 @@ export const metadata: Metadata = {
   description: 'Set up your voice identity to improve meeting transcription accuracy',
 };
 
-export default async function VoiceSetupPageWrapper({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function VoiceSetupPageWrapper({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const voiceIdentities = await getUserVoiceIdentity({ workspaceId: id });
 
   // Pass data to client component
