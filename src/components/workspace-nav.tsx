@@ -6,7 +6,6 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import UserProfileMenu from './user-profile-menu';
 import { ChevronRight, CassetteTape, Menu, Cog, Mic } from 'lucide-react';
-import VoiceIdentityDialog from './voice-identity-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { Link } from './ui/link';
@@ -113,21 +112,19 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
           {/* Desktop controls */}
           <div className="hidden items-center gap-2 md:flex">
             <div className="relative">
-              <VoiceIdentityDialog
-                workspaceId={workspaceId}
-                hasVoiceIdentity={!!voiceIdentities.data && voiceIdentities.data.length > 0}
-                voiceIdentities={voiceIdentities.data}
-                buttonLabel={
-                  <>
-                    <Mic className="h-4 w-4" />
-                    {voiceIdentities.data && voiceIdentities.data.length > 0
-                      ? `Voice Samples (${voiceIdentities.data.length}/3)`
-                      : 'Set Up Voice ID'}
-                  </>
-                }
-                buttonVariant="outline"
-                buttonClassName={`${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
-              />
+              {/* Replace VoiceIdentityDialog with Link to the voice-setup page */}
+              <Button
+                variant="outline"
+                className={needsMoreVoiceSamples ? 'voice-attention' : ''}
+                asChild
+              >
+                <Link href={`/workspace/${workspaceId}/voice-setup`} prefetch>
+                  <Mic className="mr-2 h-4 w-4" />
+                  {voiceIdentities.data && voiceIdentities.data.length > 0
+                    ? `Voice Samples (${voiceIdentities.data.length}/3)`
+                    : 'Set Up Voice ID'}
+                </Link>
+              </Button>
             </div>
             <UserProfileMenu user={session?.user} />
           </div>
@@ -175,7 +172,6 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                   <div className="flex flex-col gap-4">
                     <h3 className="text-muted-foreground text-sm font-medium">Workspace</h3>
 
-                    {/* Direct embedding of the dialog components with full button styling */}
                     <div className="space-y-2">
                       {/* Remove the direct link and use the dialog component properly */}
                       <WorkspaceSettingsDialog
@@ -193,26 +189,19 @@ async function WorkspaceNav({ workspaceId, breadcrumbs }: WorkspaceNavProps) {
                         }
                       />
 
-                      <div className="relative w-full">
-                        <VoiceIdentityDialog
-                          workspaceId={workspaceId}
-                          hasVoiceIdentity={
-                            !!voiceIdentities.data && voiceIdentities.data.length > 0
-                          }
-                          voiceIdentities={voiceIdentities.data}
-                          className="w-full"
-                          buttonVariant="outline"
-                          buttonClassName={`w-full justify-start ${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
-                          buttonLabel={
-                            <>
-                              <Mic className="mr-2 h-4 w-4" />
-                              {voiceIdentities.data && voiceIdentities.data.length > 0
-                                ? `Voice Samples (${voiceIdentities.data.length}/3)`
-                                : 'Set Up Voice ID'}
-                            </>
-                          }
-                        />
-                      </div>
+                      {/* Replace VoiceIdentityDialog with Link to voice-setup page */}
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start ${needsMoreVoiceSamples ? 'voice-attention' : ''}`}
+                        asChild
+                      >
+                        <Link href={`/workspace/${workspaceId}/voice-setup`} prefetch>
+                          <Mic className="mr-2 h-4 w-4" />
+                          {voiceIdentities.data && voiceIdentities.data.length > 0
+                            ? `Voice Samples (${voiceIdentities.data.length}/3)`
+                            : 'Set Up Voice ID'}
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 </div>
