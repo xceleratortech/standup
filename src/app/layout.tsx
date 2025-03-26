@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import NextTopLoader from 'nextjs-toploader';
@@ -36,6 +37,7 @@ export default function RootLayout({
             <Toaster position="bottom-center" />
           </DraftRecordingsProvider>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
