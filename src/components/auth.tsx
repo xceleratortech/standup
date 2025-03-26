@@ -14,9 +14,14 @@ import { SignUp } from '@/components/sign-up';
 import SignIn from './sign-in';
 import { CassetteTape } from 'lucide-react';
 import { Link } from '@/components/ui/link';
+import { useSearchParams } from 'next/navigation';
 
 export function Authenticate() {
-  const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>('login');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab = tabParam === 'signup' ? 'signup' : 'login';
+
+  const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>(initialTab);
   const [transitioning, setTransitioning] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [contentHeight, setContentHeight] = useState<number>(0);

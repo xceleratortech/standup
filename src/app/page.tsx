@@ -1,4 +1,3 @@
-import { Authenticate } from '@/components/auth';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getUserWorkspaces } from '@/lib/actions/workspace';
@@ -9,14 +8,10 @@ export default async function Home() {
     headers: await headers(),
   });
 
-  if (!session)
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <main className="w-full max-w-md space-y-8 p-6">
-          <Authenticate />
-        </main>
-      </div>
-    );
+  // If not authenticated, redirect to home/landing page
+  if (!session) {
+    redirect('/home');
+  }
 
   // Check if user has any workspaces
   const workspaces = await getUserWorkspaces();
