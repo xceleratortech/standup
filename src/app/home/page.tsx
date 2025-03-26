@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CassetteTape } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { HomeNavBar } from '@/components/home-navbar';
 
 export default async function Home() {
   // Check auth status to show correct CTA
@@ -47,61 +48,8 @@ export default async function Home() {
 
   return (
     <main className="bg-background flex min-h-screen flex-col items-center">
-      {/* Navigation */}
-      <header className="bg-background/95 sticky top-0 z-40 w-full border-b backdrop-blur">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 py-4 md:px-8">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-2 text-2xl font-bold">
-              <CassetteTape className="text-primary h-6 w-6" />
-              <span className="text-primary">STANDUP</span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-6 md:flex">
-            <div className="flex gap-6">
-              <Link href="#features" className="hover:text-primary text-sm font-medium">
-                Features
-              </Link>
-              <Link href="#how-it-works" className="hover:text-primary text-sm font-medium">
-                How It Works
-              </Link>
-              <Link
-                href="https://github.com/xrehpicx/standup"
-                target="_blank"
-                className="hover:text-primary text-sm font-medium"
-              >
-                GitHub
-              </Link>
-            </div>
-
-            <Button asChild>
-              {session ? <Link href="/">Dashboard</Link> : <Link href="/login">Sign In</Link>}
-            </Button>
-          </nav>
-
-          {/* Mobile menu button - Static version */}
-          <div className="flex md:hidden">
-            <Button variant="outline" size="icon" className="h-10 w-10">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" x2="21" y1="6" y2="6" />
-                <line x1="3" x2="21" y1="12" y2="12" />
-                <line x1="3" x2="21" y1="18" y2="18" />
-              </svg>
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Navigation - replaced with client component */}
+      <HomeNavBar />
 
       {/* Hero Section - simplified CTAs */}
       <section className="w-full py-24 md:py-32">
