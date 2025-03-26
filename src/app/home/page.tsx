@@ -64,7 +64,7 @@ export default async function Home() {
               </Badge>
             </div>
             <h1 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text pb-1 text-5xl font-bold text-transparent md:text-6xl">
-              Extract meaning, not minutes
+              Extract Meaning, not Minutes
             </h1>
             <p className="text-muted-foreground mx-auto max-w-2xl text-xl md:text-2xl">
               Use AI to transcribe, separate speakers, and extract personalized action items from
