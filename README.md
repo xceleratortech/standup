@@ -1,6 +1,6 @@
 <div align="center">
   <h1>STANDUP</h1>
-  <p>Have more organised IRL meetings. Replace your scrum master with AI.</p>
+  <p>Extract Meaning, not Minutes. Replace your scrum master with AI.</p>
   
   <a href="https://standup.raj.how" target="_blank">
     <img src="https://img.shields.io/badge/Try%20it%20now-standup.raj.how-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNhc3NldHRlLXRhcGUiPjxwYXRoIGQ9Ik0yIDE1LjVWMTdhMiAyIDAgMCAwIDIgMmgxNmEyIDIgMCAwIDAgMi0ydi0xLjVBMi41IDIuNSAwIDAgMCAyMC41IDEzaC0xN0EyLjUgMi41IDAgMCAwIDIgMTUuNVoiLz48cGF0aCBkPSJNMiA1YTIgMiAwIDAgMSAyLTJoMTZhMiAyIDAgMCAxIDIgMnYxMC41YTIuNSAyLjUgMCAwIDAtMiAyLjQ1di0xLjlhMS41IDEuNSAwIDAgMC0xLjUtMS41aC0xM0ExLjUgMS41IDAgMCAwIDQgMTZ2Mi4wNUEyLjUgMi41IDAgMCAwIDIgMTUuNVY1WiIvPjxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIzIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSI5IiByPSIzIi8+PHBhdGggZD0iTTYgMTNoMTIiLz48cGF0aCBkPSJNMiAyaDIwIi8+PC9zdmc+" alt="Try it now">
