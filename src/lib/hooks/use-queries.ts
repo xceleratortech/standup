@@ -155,11 +155,14 @@ export function useVoiceIdentities(workspaceId: string, userId?: string) {
 }
 
 // --- Outcome hooks ---
-export function useMeetingOutcomes(meetingId: string) {
+export function useMeetingOutcomes(meetingId: string, focusUserId?: string | 'all') {
   return useQuery({
-    queryKey: ['outcomes', meetingId],
+    queryKey: ['outcomes', meetingId, focusUserId],
     queryFn: async () => {
-      const response = await getMeetingOutcomes(meetingId);
+      const response = await getMeetingOutcomes(
+        meetingId,
+        focusUserId !== 'all' ? focusUserId : undefined
+      );
       const data = extractData(response);
       if (!data) throw new Error(response?.error || 'Failed to get meeting outcomes');
       return data;

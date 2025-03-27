@@ -10,7 +10,7 @@ import {
   workspaceUser,
   meetingRecording,
 } from '@/lib/db/schema';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq, and, isNotNull, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { generateOutcome } from './ai/generate';
 import { user } from '../db/auth-schema';
@@ -98,7 +98,7 @@ export async function createMeetingOutcome({
 }
 
 // Get all outcomes for a meeting
-export async function getMeetingOutcomes(meetingId: string) {
+export async function getMeetingOutcomes(meetingId: string, focusUserId?: string | 'all') {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -131,13 +131,41 @@ export async function getMeetingOutcomes(meetingId: string) {
       return { error: "You don't have access to this meeting" };
     }
 
-    // Get all outcomes
+    // Get all outcomes for this meeting first
     const outcomes = await db
       .select()
       .from(meetingOutcome)
       .where(eq(meetingOutcome.meetingId, meetingId));
 
-    return { data: outcomes };
+    // If no filter is applied, return all outcomes
+    if (!focusUserId) {
+      return { data: outcomes };
+    }
+
+    // Apply filtering in memory based on meta field
+    const filteredOutcomes = outcomes.filter((outcome) => {
+      if (!outcome.meta) {
+        // Include outcomes with no meta data only when looking for general outcomes
+        return focusUserId === 'all';
+      }
+
+      try {
+        const meta = JSON.parse(outcome.meta);
+
+        if (focusUserId === 'all') {
+          // For 'all' filter, return outcomes with no focusParticipantId
+          return !meta.focusParticipantId;
+        } else {
+          // For specific user filter, match that user's ID
+          return meta.focusParticipantId === focusUserId;
+        }
+      } catch (e) {
+        // If meta can't be parsed as JSON, include it only for 'all' filter
+        return focusUserId === 'all';
+      }
+    });
+
+    return { data: filteredOutcomes };
   } catch (error) {
     console.error('Error getting meeting outcomes:', error);
     return { error: 'Failed to get meeting outcomes' };
@@ -420,7 +448,10 @@ export async function generateMeetingOutcome({
         type: outcomeType === 'summary' ? 'Summary' : 'Action Items',
         content,
         createdById: userId,
-        meta: focusParticipantId ? JSON.stringify({ focusParticipantId }) : null,
+        meta: JSON.stringify({
+          additionalPrompt: additionalPrompt || undefined,
+          focusParticipantId: focusParticipantId || undefined,
+        }),
       })
       .returning();
 

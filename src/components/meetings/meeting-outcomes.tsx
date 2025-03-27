@@ -9,6 +9,7 @@ import {
   Trash2,
   ExternalLink,
   UserCircle2,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
@@ -67,7 +68,15 @@ export default function MeetingOutcomes({
   initialOutcomes = [],
   currentUserId = '',
 }: MeetingOutcomesProps) {
-  const { data: outcomes = initialOutcomes, isLoading } = useMeetingOutcomes(meetingId);
+  // Add filter state
+  const [outcomeFilter, setOutcomeFilter] = useState<string | 'all'>(
+    currentUserId ? currentUserId : 'all'
+  );
+
+  const { data: outcomes = initialOutcomes, isLoading } = useMeetingOutcomes(
+    meetingId,
+    outcomeFilter
+  );
   const { data: participants = [], isLoading: isLoadingParticipants } =
     useMeetingParticipants(meetingId);
   const { mutate: deleteOutcome, isPending: isDeleting } = useDeleteOutcome();
@@ -179,17 +188,78 @@ export default function MeetingOutcomes({
           <ListChecks className="h-5 w-5" />
           Outcomes
         </h2>
-        {canEdit && (
-          <Button size="sm" className="gap-1" onClick={() => setShowGenerateDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add Outcome
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Add filter dropdown */}
+          <div className="flex items-center">
+            <Select
+              value={outcomeFilter || 'all'}
+              onValueChange={(value) => setOutcomeFilter(value === 'all' ? 'all' : value)}
+            >
+              <SelectTrigger className="h-9 w-[180px] md:w-[220px]">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-3.5 w-3.5" />
+                  <SelectValue placeholder="Filter outcomes">
+                    {outcomeFilter === 'all'
+                      ? 'All outcomes'
+                      : outcomeFilter === currentUserId
+                        ? 'My focused outcomes'
+                        : participants.find((p) => p.userId === outcomeFilter)?.name ||
+                          'Filtered outcomes'}
+                  </SelectValue>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <UserCircle2 className="text-muted-foreground h-4 w-4" />
+                    <span>All outcomes</span>
+                  </div>
+                </SelectItem>
+                {participants.map((participant) => (
+                  <SelectItem key={participant.userId} value={participant.userId}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={participant.image || undefined} />
+                        <AvatarFallback>
+                          {participant.name?.[0] || participant.email?.[0] || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span>
+                          {participant.name || 'Unknown User'}
+                          {participant.userId === currentUserId && ' (You)'}
+                        </span>
+                        {participant.email && (
+                          <span className="text-muted-foreground text-xs">{participant.email}</span>
+                        )}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {canEdit && (
+            <Button size="sm" className="gap-1" onClick={() => setShowGenerateDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add Outcome
+            </Button>
+          )}
+        </div>
       </div>
 
       {outcomes.length === 0 ? (
         <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center">
-          <p>No outcomes have been added yet.</p>
+          <p>
+            {outcomeFilter !== 'all'
+              ? `No outcomes focused on ${
+                  outcomeFilter === currentUserId
+                    ? 'you'
+                    : participants.find((p) => p.userId === outcomeFilter)?.name || 'this user'
+                } have been added yet.`
+              : 'No outcomes have been added yet.'}
+          </p>
           {canEdit && (
             <p className="mt-2 text-sm">
               Add a summary or action items from this meeting to keep track of important points.
