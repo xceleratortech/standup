@@ -1,17 +1,21 @@
 # Stage 1: Base - Dependencies installation
 FROM node:20-alpine AS base
 WORKDIR /app
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Stage 2: Dependencies
 FROM base AS deps
 COPY package.json package-lock.json* ./
+# Use development mode for installing to ensure devDependencies are included
+ENV NODE_ENV=development
 RUN npm install --force
 
 # Stage 3: Builder
 FROM base AS builder
 WORKDIR /app
+# Use development mode for building
+ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -32,7 +36,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
