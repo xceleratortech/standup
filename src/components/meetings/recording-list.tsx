@@ -1070,113 +1070,76 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                         className="overflow-hidden rounded-b-md border border-t-0"
                       >
                         <div className="p-2 sm:p-3">
-                          {recording.transcription ? (
-                            <Tabs
-                              value={activeTab[recording.id] || 'audio'}
-                              onValueChange={(value) =>
-                                setActiveTab((prev) => ({
-                                  ...prev,
-                                  [recording.id]: value,
-                                }))
-                              }
-                              className="w-full"
-                            >
-                              <TabsList className="mb-2 grid w-full grid-cols-2">
-                                <TabsTrigger value="audio">Audio</TabsTrigger>
-                                <TabsTrigger value="transcript">Transcript</TabsTrigger>
-                              </TabsList>
-
-                              <TabsContent value="audio" className="mt-0">
-                                <AudioPlayer
-                                  src={recordingURLs[recording.id]}
-                                  isPlaying={playing === recording.id}
-                                  onPlayPause={() =>
-                                    togglePlay(new MouseEvent('click') as any, recording.id)
-                                  }
-                                  totalDurationSeconds={getDurationInSeconds(
-                                    recording.duration,
-                                    recording.durationSeconds
-                                  )}
-                                  initialTime={currentPlaybackTimes[recording.id] || 0}
-                                  onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
-                                />
-                              </TabsContent>
-
-                              <TabsContent value="transcript" className="mt-0">
-                                <div className="flex flex-col space-y-2">
-                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                    {recording.transcriptionGeneratedAt && (
-                                      <div className="text-muted-foreground mb-2 text-xs">
-                                        Transcript generated{' '}
-                                        {formatDistanceToNow(
-                                          new Date(recording.transcriptionGeneratedAt),
-                                          {
-                                            addSuffix: true,
-                                          }
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {canEdit && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setEditingTranscript(recording.id);
-                                          setEditingSegmentIndex(undefined);
-                                        }}
-                                        className="mb-2 w-full sm:mb-0 sm:w-auto"
-                                      >
-                                        Edit Transcript
-                                      </Button>
+                          {/* Render AudioPlayer on top */}
+                          <AudioPlayer
+                            src={recordingURLs[recording.id]}
+                            isPlaying={playing === recording.id}
+                            onPlayPause={() =>
+                              togglePlay(new MouseEvent('click') as any, recording.id)
+                            }
+                            totalDurationSeconds={getDurationInSeconds(
+                              recording.duration,
+                              recording.durationSeconds
+                            )}
+                            initialTime={currentPlaybackTimes[recording.id] || 0}
+                            onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
+                          />
+                          {/* Render transcript content below if it exists */}
+                          {recording.transcription && (
+                            <div className="mt-2">
+                              <div className="mb-2 flex items-center justify-between">
+                                {recording.transcriptionGeneratedAt && (
+                                  <div className="text-muted-foreground text-xs">
+                                    Transcript generated{' '}
+                                    {formatDistanceToNow(
+                                      new Date(recording.transcriptionGeneratedAt),
+                                      {
+                                        addSuffix: true,
+                                      }
                                     )}
                                   </div>
-
-                                  {editingTranscript === recording.id ? (
-                                    <TranscriptEditor
-                                      meetingId={meetingId}
-                                      recordingId={recording.id}
-                                      transcription={recording.transcription || null}
-                                      onClose={() => {
-                                        setEditingTranscript(null);
-                                        setEditingSegmentIndex(undefined);
-                                      }}
-                                      highlightedSegmentIndex={editingSegmentIndex}
-                                    />
-                                  ) : recording.transcription ? (
-                                    <RecordingTranscript
-                                      meetingId={meetingId}
-                                      transcription={recording.transcription}
-                                      audioUrl={recordingURLs[recording.id]}
-                                      currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
-                                      onPlaySegment={(timeInSeconds) =>
-                                        handlePlaySegment(recording.id, timeInSeconds)
-                                      }
-                                      canEdit={canEdit}
-                                      onEditSegment={(segmentIndex) => {
-                                        setEditingTranscript(recording.id);
-                                        setEditingSegmentIndex(segmentIndex);
-                                      }}
-                                    />
-                                  ) : null}
-                                </div>
-                              </TabsContent>
-                            </Tabs>
-                          ) : (
-                            /* Just the audio player if no transcription */
-                            <AudioPlayer
-                              src={recordingURLs[recording.id]}
-                              isPlaying={playing === recording.id}
-                              onPlayPause={() =>
-                                togglePlay(new MouseEvent('click') as any, recording.id)
-                              }
-                              totalDurationSeconds={getDurationInSeconds(
-                                recording.duration,
-                                recording.durationSeconds
+                                )}
+                                {canEdit && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingTranscript(recording.id);
+                                      setEditingSegmentIndex(undefined);
+                                    }}
+                                  >
+                                    Edit Transcript
+                                  </Button>
+                                )}
+                              </div>
+                              {editingTranscript === recording.id ? (
+                                <TranscriptEditor
+                                  meetingId={meetingId}
+                                  recordingId={recording.id}
+                                  transcription={recording.transcription || null}
+                                  onClose={() => {
+                                    setEditingTranscript(null);
+                                    setEditingSegmentIndex(undefined);
+                                  }}
+                                  highlightedSegmentIndex={editingSegmentIndex}
+                                />
+                              ) : (
+                                <RecordingTranscript
+                                  meetingId={meetingId}
+                                  transcription={recording.transcription}
+                                  audioUrl={recordingURLs[recording.id]}
+                                  currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
+                                  onPlaySegment={(timeInSeconds) =>
+                                    handlePlaySegment(recording.id, timeInSeconds)
+                                  }
+                                  canEdit={canEdit}
+                                  onEditSegment={(segmentIndex) => {
+                                    setEditingTranscript(recording.id);
+                                    setEditingSegmentIndex(segmentIndex);
+                                  }}
+                                />
                               )}
-                              initialTime={currentPlaybackTimes[recording.id] || 0}
-                              onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
-                            />
+                            </div>
                           )}
                         </div>
                       </motion.div>
