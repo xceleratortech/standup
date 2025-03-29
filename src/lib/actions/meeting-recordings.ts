@@ -9,6 +9,7 @@ import {
   workspaceUser,
   meetingParticipant,
   userVoiceIdentity,
+  recordingGroup,
 } from '@/lib/db/schema';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -107,14 +108,22 @@ export async function addMeetingRecording({
   recordingName,
   duration,
   durationSeconds,
-  addCurrentUserAsParticipant = false, // New parameter with default value
+  addCurrentUserAsParticipant = false,
+  groupId, // Add support for groupId
+  segmentIndex, // Add support for segmentIndex
+  isSegmented, // Add support for isSegmented flag
+  totalSegments, // Add support for totalSegments
 }: {
   meetingId: string;
   fileKey: string;
   recordingName?: string;
   duration?: string;
   durationSeconds?: string;
-  addCurrentUserAsParticipant?: boolean; // Optional parameter
+  addCurrentUserAsParticipant?: boolean;
+  groupId?: string; // New parameter for grouping recordings
+  segmentIndex?: number; // New parameter for ordering segments
+  isSegmented?: boolean; // New parameter to flag this as part of a segmented recording
+  totalSegments?: number; // New parameter to track total segments in a group
 }) {
   try {
     const session = await auth.api.getSession({
@@ -168,7 +177,7 @@ export async function addMeetingRecording({
     // Generate a download URL
     const recordingUrl = await generateDownloadUrl(fileKey, 3600 * 24 * 7); // 1 week expiry
 
-    // Create new recording entry
+    // Create new recording entry with optional group parameters
     const [newRecording] = await db
       .insert(meetingRecording)
       .values({
@@ -179,6 +188,11 @@ export async function addMeetingRecording({
         duration,
         durationSeconds, // Store the duration in seconds
         createdById: userId,
+        // Add group-related fields if they exist
+        groupId: groupId || undefined,
+        segmentIndex: segmentIndex !== undefined ? segmentIndex : undefined,
+        isSegmented: isSegmented || false,
+        totalSegments: totalSegments || undefined,
       })
       .returning();
 
@@ -214,6 +228,151 @@ export async function addMeetingRecording({
   } catch (error) {
     console.error('Error adding recording:', error);
     return { error: 'Failed to add recording' };
+  }
+}
+
+// Add a segmented recording to a meeting (for large audio files)
+export async function addSegmentedMeetingRecording({
+  meetingId,
+  segments,
+  groupName,
+  totalDuration,
+  formattedTotalDuration,
+  addCurrentUserAsParticipant = false,
+}: {
+  meetingId: string;
+  segments: {
+    fileKey: string;
+    segmentName: string;
+    duration: string;
+    durationSeconds: number;
+    segmentIndex: number;
+  }[];
+  groupName: string;
+  totalDuration: number;
+  formattedTotalDuration: string;
+  addCurrentUserAsParticipant?: boolean;
+}) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return { error: 'Unauthorized' };
+    }
+
+    const userId = session.user.id;
+
+    // Get the meeting
+    const meetingData = await db.query.meeting.findFirst({
+      where: eq(meeting.id, meetingId),
+    });
+
+    if (!meetingData) {
+      return { error: 'Meeting not found' };
+    }
+
+    // Check if user has permission to update this meeting
+    const userWorkspace = await db.query.workspaceUser.findFirst({
+      where: and(
+        eq(workspaceUser.workspaceId, meetingData.workspaceId),
+        eq(workspaceUser.userId, userId)
+      ),
+    });
+
+    if (!userWorkspace) {
+      return { error: "You don't have access to this meeting" };
+    }
+
+    const participant = await db.query.meetingParticipant.findFirst({
+      where: and(
+        eq(meetingParticipant.meetingId, meetingId),
+        eq(meetingParticipant.userId, userId)
+      ),
+    });
+
+    const canUpdate =
+      userWorkspace.role === 'admin' ||
+      meetingData.createdById === userId ||
+      participant?.role === 'organizer' ||
+      participant?.role === 'editor';
+
+    if (!canUpdate) {
+      return { error: "You don't have permission to update this meeting" };
+    }
+
+    // Create a group ID for all segments
+    const groupId = crypto.randomUUID();
+
+    // Create a recording group entry
+    const [recordingGroupEntry] = await db
+      .insert(recordingGroup)
+      .values({
+        id: groupId,
+        meetingId,
+        groupName,
+        totalDuration,
+        formattedTotalDuration,
+        createdById: userId,
+      })
+      .returning();
+
+    // Add each segment as a separate recording
+    const recordingPromises = segments.map(async (segment) => {
+      // Generate a download URL for the segment
+      const recordingUrl = await generateDownloadUrl(segment.fileKey, 3600 * 24 * 7); // 1 week expiry
+
+      // Create recording entry for this segment
+      return db.insert(meetingRecording).values({
+        meetingId,
+        fileKey: segment.fileKey,
+        recordingUrl,
+        recordingName: segment.segmentName,
+        duration: segment.duration,
+        durationSeconds: segment.durationSeconds.toString(),
+        createdById: userId,
+        groupId,
+        segmentIndex: segment.segmentIndex,
+        isSegmented: true,
+        totalSegments: segments.length,
+      });
+    });
+
+    await Promise.all(recordingPromises);
+
+    // If we should add the current user as a participant and they're not already
+    if (addCurrentUserAsParticipant) {
+      // Check if the user is already a participant
+      const existingParticipant = await db.query.meetingParticipant.findFirst({
+        where: and(
+          eq(meetingParticipant.meetingId, meetingId),
+          eq(meetingParticipant.userId, userId)
+        ),
+      });
+
+      // If not already a participant, add them
+      if (!existingParticipant) {
+        await db.insert(meetingParticipant).values({
+          meetingId,
+          userId,
+        });
+      }
+    }
+
+    // Update the meeting's updatedAt timestamp
+    await db
+      .update(meeting)
+      .set({
+        updatedAt: new Date(),
+      })
+      .where(eq(meeting.id, meetingId));
+
+    revalidatePath(`/workspace/${meetingData.workspaceId}/meeting/${meetingId}`);
+    return { data: { groupId, segments: segments.length } };
+  } catch (error) {
+    console.error('Error adding segmented recording:', error);
+    return { error: 'Failed to add segmented recordings' };
   }
 }
 

@@ -61,7 +61,12 @@ interface Recording {
   createdById: string;
   updatedAt?: Date;
   transcription?: string | null;
-  transcriptionGeneratedAt?: Date | null; // Add this field
+  transcriptionGeneratedAt?: Date | null;
+  // Fix: Make these fields properly nullable to match the database schema
+  groupId?: string | null;
+  segmentIndex?: number | null;
+  isSegmented?: boolean | null;
+  totalSegments?: number | null;
 }
 
 interface RecordingListProps {
@@ -76,13 +81,34 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   const deleteRecordingMutation = useDeleteRecording();
   const { mutate: generateTranscriptions, isPending: isGeneratingTranscriptions } =
     useGenerateTranscriptions(meetingId);
-  const { mutate: regenerateTranscription, isPending: isRegeneratingTranscription } =
-    useRegenerateRecordingTranscription(meetingId);
+  const { mutate: regenerateTranscription } = useRegenerateRecordingTranscription(meetingId);
 
-  // Sort recordings by creation date (newest first)
-  const sortedRecordings = [...recordings].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  // Sort recordings, keeping segments together
+  const sortedRecordings = [...recordings].sort((a, b) => {
+    // First sort by creation date (newest first)
+    const dateCompare = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+    // If they're in the same group, sort by segment index
+    if (a.groupId && b.groupId && a.groupId === b.groupId) {
+      return (a.segmentIndex || 0) - (b.segmentIndex || 0);
+    }
+
+    return dateCompare;
+  });
+
+  // For debugging purposes only - remove if not needed
+  // const recordingGroups = sortedRecordings.reduce(
+  //   (groups, recording) => {
+  //     if (recording.groupId) {
+  //       if (!groups[recording.groupId]) {
+  //         groups[recording.groupId] = [];
+  //       }
+  //       groups[recording.groupId].push(recording);
+  //     }
+  //     return groups;
+  //   },
+  //   {} as Record<string, Recording[]>
+  // );
 
   const [playing, setPlaying] = useState<string | null>(null);
   const [recordingURLs, setRecordingURLs] = useState<Record<string, string>>({});
@@ -569,278 +595,315 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
           </Alert>
         ) : (
           <div className="space-y-3">
-            {sortedRecordings.map((recording) => (
-              <div key={recording.id} className="flex flex-col">
-                {/* Clickable header */}
+            {sortedRecordings.map((recording) => {
+              const isGrouped = !!recording.groupId;
+              const isFirstInGroup = isGrouped && recording.segmentIndex === 0;
+              const isLastInGroup =
+                isGrouped &&
+                recording.segmentIndex !== null &&
+                recording.totalSegments !== null &&
+                recording.segmentIndex === recording.totalSegments - 1;
+
+              return (
                 <div
-                  className={cn(
-                    'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors',
-                    expandedRecordings[recording.id] && 'rounded-b-none'
-                  )}
-                  onClick={() => toggleExpand(recording.id)}
+                  key={recording.id}
+                  className={cn('flex flex-col', isGrouped && 'relative pl-4')}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {recording.recordingName || 'Unnamed Recording'}
-                    </p>
-                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
-                      <span>{formatDuration(recording.duration, recording.durationSeconds)}</span>
-                      <span className="xs:inline hidden">•</span>
-                      <span className="truncate">
-                        {formatDistanceToNow(new Date(recording.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </span>
-                      {recording.transcriptionGeneratedAt && (
+                  {/* Group indicator line */}
+                  {isGrouped && (
+                    <div
+                      className="bg-muted-foreground/20 absolute top-0 left-0 h-full w-0.5"
+                      style={{
+                        top: isFirstInGroup ? '50%' : 0,
+                        bottom: isLastInGroup ? '50%' : 0,
+                      }}
+                    />
+                  )}
+
+                  {/* Group header - only show for first segment */}
+                  {isFirstInGroup &&
+                    recording.segmentIndex !== null &&
+                    recording.totalSegments !== null && (
+                      <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
+                        <span className="bg-background absolute -left-2 h-4 w-4 rounded-full border" />
+                        <span>
+                          Part {recording.segmentIndex + 1} of {recording.totalSegments}
+                        </span>
+                      </div>
+                    )}
+
+                  {/* Existing recording header and content */}
+                  <div
+                    className={cn(
+                      'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors',
+                      expandedRecordings[recording.id] && 'rounded-b-none',
+                      isGrouped && 'border-dashed'
+                    )}
+                    onClick={() => toggleExpand(recording.id)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {recording.recordingName || 'Unnamed Recording'}
+                      </p>
+                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
+                        <span>{formatDuration(recording.duration, recording.durationSeconds)}</span>
+                        <span className="xs:inline hidden">•</span>
+                        <span className="truncate">
+                          {formatDistanceToNow(new Date(recording.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                        {recording.transcriptionGeneratedAt && (
+                          <>
+                            <span className="xs:inline hidden">•</span>
+                            <span className="flex items-center gap-1 text-xs">
+                              <RefreshCw className="h-3 w-3" />
+                              <span className="hidden sm:inline">Transcript </span>
+                              {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="ml-2 flex shrink-0 items-center gap-1">
+                      {/* Mobile view menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild className="sm:hidden">
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(e, recording.id);
+                            }}
+                          >
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </DropdownMenuItem>
+                          {canEdit && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRegenerateTranscription(e, recording.id);
+                                }}
+                                disabled={regeneratingIds[recording.id]}
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    regeneratingIds[recording.id] && 'animate-spin'
+                                  )}
+                                />
+                                Regenerate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  confirmDelete(e, recording.id);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Desktop view buttons */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => handleDownload(e, recording.id)}
+                        className="hidden h-8 w-8 sm:flex"
+                        title="Download recording"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+
+                      {canEdit && (
                         <>
-                          <span className="xs:inline hidden">•</span>
-                          <span className="flex items-center gap-1 text-xs">
-                            <RefreshCw className="h-3 w-3" />
-                            <span className="hidden sm:inline">Transcript </span>
-                            {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
-                              addSuffix: true,
-                            })}
-                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => handleRegenerateTranscription(e, recording.id)}
+                            className="hidden h-8 w-8 sm:flex"
+                            disabled={regeneratingIds[recording.id]}
+                            title="Regenerate transcript"
+                          >
+                            <RefreshCw
+                              className={cn(
+                                'h-4 w-4',
+                                regeneratingIds[recording.id] && 'animate-spin'
+                              )}
+                            />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => confirmDelete(e, recording.id)}
+                            className="hidden h-8 w-8 sm:flex"
+                            title="Delete recording"
+                          >
+                            <Trash2 className="text-destructive h-4 w-4" />
+                          </Button>
                         </>
                       )}
+
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(recording.id);
+                        }}
+                        className="h-8 w-8"
+                        disabled={loadingRecordings[recording.id]}
+                      >
+                        {loadingRecordings[recording.id] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : expandedRecordings[recording.id] ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="ml-2 flex shrink-0 items-center gap-1">
-                    {/* Mobile view menu */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild className="sm:hidden">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(e, recording.id);
-                          }}
-                        >
-                          <Download className="mr-2 h-4 w-4" /> Download
-                        </DropdownMenuItem>
-                        {canEdit && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRegenerateTranscription(e, recording.id);
-                              }}
-                              disabled={regeneratingIds[recording.id]}
+                  {/* Animated content section */}
+                  <AnimatePresence>
+                    {expandedRecordings[recording.id] && recordingURLs[recording.id] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden rounded-b-md border border-t-0"
+                      >
+                        <div className="p-2 sm:p-3">
+                          {recording.transcription ? (
+                            <Tabs
+                              value={activeTab[recording.id] || 'audio'}
+                              onValueChange={(value) =>
+                                setActiveTab((prev) => ({
+                                  ...prev,
+                                  [recording.id]: value,
+                                }))
+                              }
+                              className="w-full"
                             >
-                              <RefreshCw
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  regeneratingIds[recording.id] && 'animate-spin'
-                                )}
-                              />
-                              Regenerate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                confirmDelete(e, recording.id);
-                              }}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                              <TabsList className="mb-2 grid w-full grid-cols-2">
+                                <TabsTrigger value="audio">Audio</TabsTrigger>
+                                <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                              </TabsList>
 
-                    {/* Desktop view buttons */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleDownload(e, recording.id)}
-                      className="hidden h-8 w-8 sm:flex"
-                      title="Download recording"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-
-                    {canEdit && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleRegenerateTranscription(e, recording.id)}
-                          className="hidden h-8 w-8 sm:flex"
-                          disabled={regeneratingIds[recording.id]}
-                          title="Regenerate transcript"
-                        >
-                          <RefreshCw
-                            className={cn(
-                              'h-4 w-4',
-                              regeneratingIds[recording.id] && 'animate-spin'
-                            )}
-                          />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => confirmDelete(e, recording.id)}
-                          className="hidden h-8 w-8 sm:flex"
-                          title="Delete recording"
-                        >
-                          <Trash2 className="text-destructive h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExpand(recording.id);
-                      }}
-                      className="h-8 w-8"
-                      disabled={loadingRecordings[recording.id]}
-                    >
-                      {loadingRecordings[recording.id] ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : expandedRecordings[recording.id] ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Animated content section */}
-                <AnimatePresence>
-                  {expandedRecordings[recording.id] && recordingURLs[recording.id] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden rounded-b-md border border-t-0"
-                    >
-                      <div className="p-2 sm:p-3">
-                        {recording.transcription ? (
-                          <Tabs
-                            value={activeTab[recording.id] || 'audio'}
-                            onValueChange={(value) =>
-                              setActiveTab((prev) => ({
-                                ...prev,
-                                [recording.id]: value,
-                              }))
-                            }
-                            className="w-full"
-                          >
-                            <TabsList className="mb-2 grid w-full grid-cols-2">
-                              <TabsTrigger value="audio">Audio</TabsTrigger>
-                              <TabsTrigger value="transcript">Transcript</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="audio" className="mt-0">
-                              <AudioPlayer
-                                src={recordingURLs[recording.id]}
-                                isPlaying={playing === recording.id}
-                                onPlayPause={() =>
-                                  togglePlay(new MouseEvent('click') as any, recording.id)
-                                }
-                                totalDurationSeconds={getDurationInSeconds(
-                                  recording.duration,
-                                  recording.durationSeconds
-                                )}
-                                initialTime={currentPlaybackTimes[recording.id] || 0}
-                                onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
-                              />
-                            </TabsContent>
-
-                            <TabsContent value="transcript" className="mt-0">
-                              <div className="flex flex-col space-y-2">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                  {recording.transcriptionGeneratedAt && (
-                                    <div className="text-muted-foreground mb-2 text-xs">
-                                      Transcript generated{' '}
-                                      {formatDistanceToNow(
-                                        new Date(recording.transcriptionGeneratedAt),
-                                        {
-                                          addSuffix: true,
-                                        }
-                                      )}
-                                    </div>
+                              <TabsContent value="audio" className="mt-0">
+                                <AudioPlayer
+                                  src={recordingURLs[recording.id]}
+                                  isPlaying={playing === recording.id}
+                                  onPlayPause={() =>
+                                    togglePlay(new MouseEvent('click') as any, recording.id)
+                                  }
+                                  totalDurationSeconds={getDurationInSeconds(
+                                    recording.duration,
+                                    recording.durationSeconds
                                   )}
+                                  initialTime={currentPlaybackTimes[recording.id] || 0}
+                                  onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
+                                />
+                              </TabsContent>
 
-                                  {canEdit && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setEditingTranscript(recording.id);
+                              <TabsContent value="transcript" className="mt-0">
+                                <div className="flex flex-col space-y-2">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                    {recording.transcriptionGeneratedAt && (
+                                      <div className="text-muted-foreground mb-2 text-xs">
+                                        Transcript generated{' '}
+                                        {formatDistanceToNow(
+                                          new Date(recording.transcriptionGeneratedAt),
+                                          {
+                                            addSuffix: true,
+                                          }
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {canEdit && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingTranscript(recording.id);
+                                          setEditingSegmentIndex(undefined);
+                                        }}
+                                        className="mb-2 w-full sm:mb-0 sm:w-auto"
+                                      >
+                                        Edit Transcript
+                                      </Button>
+                                    )}
+                                  </div>
+
+                                  {editingTranscript === recording.id ? (
+                                    <TranscriptEditor
+                                      meetingId={meetingId}
+                                      recordingId={recording.id}
+                                      transcription={recording.transcription || null}
+                                      onClose={() => {
+                                        setEditingTranscript(null);
                                         setEditingSegmentIndex(undefined);
                                       }}
-                                      className="mb-2 w-full sm:mb-0 sm:w-auto"
-                                    >
-                                      Edit Transcript
-                                    </Button>
-                                  )}
+                                      highlightedSegmentIndex={editingSegmentIndex}
+                                    />
+                                  ) : recording.transcription ? (
+                                    <RecordingTranscript
+                                      meetingId={meetingId}
+                                      transcription={recording.transcription}
+                                      audioUrl={recordingURLs[recording.id]}
+                                      currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
+                                      onPlaySegment={(timeInSeconds) =>
+                                        handlePlaySegment(recording.id, timeInSeconds)
+                                      }
+                                      canEdit={canEdit}
+                                      onEditSegment={(segmentIndex) => {
+                                        setEditingTranscript(recording.id);
+                                        setEditingSegmentIndex(segmentIndex);
+                                      }}
+                                    />
+                                  ) : null}
                                 </div>
-
-                                {editingTranscript === recording.id ? (
-                                  <TranscriptEditor
-                                    meetingId={meetingId}
-                                    recordingId={recording.id}
-                                    transcription={recording.transcription || null}
-                                    onClose={() => {
-                                      setEditingTranscript(null);
-                                      setEditingSegmentIndex(undefined);
-                                    }}
-                                    highlightedSegmentIndex={editingSegmentIndex}
-                                  />
-                                ) : recording.transcription ? (
-                                  <RecordingTranscript
-                                    meetingId={meetingId}
-                                    transcription={recording.transcription}
-                                    audioUrl={recordingURLs[recording.id]}
-                                    currentPlaybackTime={currentPlaybackTimes[recording.id] || 0}
-                                    onPlaySegment={(timeInSeconds) =>
-                                      handlePlaySegment(recording.id, timeInSeconds)
-                                    }
-                                    canEdit={canEdit}
-                                    onEditSegment={(segmentIndex) => {
-                                      setEditingTranscript(recording.id);
-                                      setEditingSegmentIndex(segmentIndex);
-                                    }}
-                                  />
-                                ) : null}
-                              </div>
-                            </TabsContent>
-                          </Tabs>
-                        ) : (
-                          /* Just the audio player if no transcription */
-                          <AudioPlayer
-                            src={recordingURLs[recording.id]}
-                            isPlaying={playing === recording.id}
-                            onPlayPause={() =>
-                              togglePlay(new MouseEvent('click') as any, recording.id)
-                            }
-                            totalDurationSeconds={getDurationInSeconds(
-                              recording.duration,
-                              recording.durationSeconds
-                            )}
-                            initialTime={currentPlaybackTimes[recording.id] || 0}
-                            onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
-                          />
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
+                              </TabsContent>
+                            </Tabs>
+                          ) : (
+                            /* Just the audio player if no transcription */
+                            <AudioPlayer
+                              src={recordingURLs[recording.id]}
+                              isPlaying={playing === recording.id}
+                              onPlayPause={() =>
+                                togglePlay(new MouseEvent('click') as any, recording.id)
+                              }
+                              totalDurationSeconds={getDurationInSeconds(
+                                recording.duration,
+                                recording.durationSeconds
+                              )}
+                              initialTime={currentPlaybackTimes[recording.id] || 0}
+                              onTimeUpdate={(time) => handleTimeUpdate(recording.id, time)}
+                            />
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
