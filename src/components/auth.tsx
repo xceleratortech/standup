@@ -2,23 +2,15 @@
 
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SignUp } from '@/components/sign-up';
 import SignIn from './sign-in';
 import { CassetteTape } from 'lucide-react';
-import { Link } from '@/components/ui/link';
 import { useSearchParams } from 'next/navigation';
 
 export function Authenticate() {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
+  const tabParam = searchParams?.get('tab');
   const initialTab = tabParam === 'signup' ? 'signup' : 'login';
 
   const [selectedTab, setSelectedTab] = useState<'login' | 'signup'>(initialTab);
