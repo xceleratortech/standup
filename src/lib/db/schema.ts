@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, integer, boolean } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema';
 
 export const workspace = pgTable('workspace', {
@@ -90,6 +90,28 @@ export const meetingRecording = pgTable('meeting_recording', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   transcription: text('transcription'),
   transcriptionGeneratedAt: timestamp('transcription_generated_at'),
+
+  // New fields for recording groups
+  groupId: uuid('group_id'), // ID shared by all segments of a split recording
+  segmentIndex: integer('segment_index'), // Position in the sequence of segments (0-based)
+  isSegmented: boolean('is_segmented'), // Flag to identify if this is part of a segmented recording
+  totalSegments: integer('total_segments'), // Total number of segments in this group
+});
+
+// New table for recording groups
+export const recordingGroup = pgTable('recording_group', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  meetingId: uuid('meeting_id')
+    .notNull()
+    .references(() => meeting.id, { onDelete: 'cascade' }),
+  groupName: text('group_name').notNull(),
+  totalDuration: integer('total_duration'), // Total duration in seconds
+  formattedTotalDuration: text('formatted_total_duration'),
+  createdById: text('created_by_id')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const meetingParticipant = pgTable('meeting_participant', {

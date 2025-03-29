@@ -11,10 +11,22 @@ export interface DraftRecording {
   blobData?: number[];
   blobType?: string;
   formattedDuration?: string; // MM:SS format
+  groupId?: string;
+  segmentIndex?: number;
+}
+
+// Add missing RecordingGroup interface
+export interface RecordingGroup {
+  id: string;
+  name: string;
+  createdAt: string;
+  totalDuration: number;
+  segmentCount: number;
 }
 
 interface DraftRecordingsContextType {
   draftRecordings: DraftRecording[];
+  recordingGroups: RecordingGroup[];
   addDraftRecording: (
     blob: Blob,
     durationSeconds: number,
@@ -22,6 +34,8 @@ interface DraftRecordingsContextType {
   ) => Promise<string | null>;
   deleteDraftRecording: (id: string) => Promise<void>;
   getDraftRecordingById: (id: string) => DraftRecording | undefined;
+  getRecordingsByGroupId: (groupId: string) => DraftRecording[];
+  deleteRecordingGroup: (groupId: string) => Promise<void>; // Updated signature to use just groupId
 }
 
 const DraftRecordingsContext = createContext<DraftRecordingsContextType | undefined>(undefined);
@@ -52,6 +66,8 @@ const openDB = (): Promise<IDBDatabase> => {
 // Completely rewritten IndexedDB operations
 export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
   const [draftRecordings, setDraftRecordings] = useState<DraftRecording[]>([]);
+  // Add missing recordingGroups state
+  const [recordingGroups, setRecordingGroups] = useState<RecordingGroup[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load draft recordings from IndexedDB on mount
@@ -100,6 +116,28 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
         }));
 
         setDraftRecordings(processedRecordings);
+
+        // Process and set recording groups
+        const groupMap = new Map<string, RecordingGroup>();
+        processedRecordings.forEach((recording) => {
+          if (recording.groupId) {
+            if (!groupMap.has(recording.groupId)) {
+              groupMap.set(recording.groupId, {
+                id: recording.groupId,
+                name: `Group ${recording.groupId.substring(0, 4)}`,
+                createdAt: recording.createdAt,
+                totalDuration: recording.duration,
+                segmentCount: 1,
+              });
+            } else {
+              const group = groupMap.get(recording.groupId)!;
+              group.totalDuration += recording.duration;
+              group.segmentCount += 1;
+            }
+          }
+        });
+
+        setRecordingGroups(Array.from(groupMap.values()));
       }
 
       setIsInitialized(true);
@@ -308,6 +346,29 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Add the missing deleteRecordingGroupFromIndexedDB function
+  const deleteRecordingGroupFromIndexedDB = async (groupId: string): Promise<boolean> => {
+    try {
+      // Open a connection to IndexedDB
+      const db = await openDB();
+      // Delete the recording group with the given groupId
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(groupId);
+
+      return new Promise<boolean>((resolve, reject) => {
+        request.onsuccess = () => resolve(true);
+        request.onerror = (event) => {
+          console.error('Error deleting recording group from IndexedDB:', event);
+          reject(new Error('Failed to delete recording group from IndexedDB'));
+        };
+      });
+    } catch (error) {
+      console.error('Error deleting recording group from IndexedDB:', error);
+      return false;
+    }
+  };
+
   // Add a new recording to drafts - now async
   const addDraftRecording = async (
     blob: Blob,
@@ -398,13 +459,56 @@ export function DraftRecordingsProvider({ children }: { children: ReactNode }) {
     return draftRecordings.find((draft) => draft.id === id);
   };
 
+  // Fixed deleteRecordingGroup function to match the interface
+  const deleteRecordingGroup = async (groupId: string): Promise<void> => {
+    if (!groupId) return;
+
+    try {
+      // Find all recordings that belong to this group
+      const groupRecordings = draftRecordings.filter((r) => r.groupId === groupId);
+
+      // Delete each recording from IndexedDB
+      for (const rec of groupRecordings) {
+        await deleteRecordingFromIndexedDB(rec.id);
+      }
+
+      // Delete the group from IndexedDB
+      await deleteRecordingGroupFromIndexedDB(groupId);
+
+      // Update state by removing all recordings in this group
+      setDraftRecordings((prev) => prev.filter((r) => r.groupId !== groupId));
+
+      // Update groups state
+      setRecordingGroups((prev: RecordingGroup[]) =>
+        prev.filter((g: RecordingGroup) => g.id !== groupId)
+      );
+    } catch (error) {
+      console.error('Error deleting recording group:', error);
+      throw error;
+    }
+  };
+
+  // Get all recordings for a specific group
+  const getRecordingsByGroupId = (groupId: string): DraftRecording[] => {
+    return draftRecordings
+      .filter((r) => r.groupId === groupId)
+      .sort((a, b) =>
+        a.segmentIndex !== undefined && b.segmentIndex !== undefined
+          ? a.segmentIndex - b.segmentIndex
+          : 0
+      );
+  };
+
   return (
     <DraftRecordingsContext.Provider
       value={{
         draftRecordings,
+        recordingGroups,
         addDraftRecording,
         deleteDraftRecording,
         getDraftRecordingById,
+        getRecordingsByGroupId,
+        deleteRecordingGroup,
       }}
     >
       {children}

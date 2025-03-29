@@ -2,10 +2,14 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, Pause, Square, X, ListPlus, FileAudio, Play, Trash2 } from 'lucide-react';
+import { Mic, Pause, Square, X, ListPlus, FileAudio, Play, Trash2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useWorkspaceMeetings, useCreateMeeting } from '@/lib/hooks/use-queries';
-import { getRecordingUploadUrl, addMeetingRecording } from '@/lib/actions/meeting-recordings';
+import {
+  getRecordingUploadUrl,
+  addMeetingRecording,
+  addSegmentedMeetingRecording,
+} from '@/lib/actions/meeting-recordings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -108,12 +112,14 @@ function RecordButton({
   onStart,
   onPause,
   onResume,
+  onUploadFile,
 }: {
   isRecording: boolean;
   isPaused: boolean;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
+  onUploadFile: () => void;
 }) {
   if (isRecording) {
     if (isPaused) {
@@ -139,13 +145,24 @@ function RecordButton({
     }
   } else {
     return (
-      <Button
-        size="icon"
-        className="h-auto flex-1 rounded-xl bg-red-600/70 shadow-md hover:bg-red-600"
-        onClick={onStart}
-      >
-        <Mic className="h-7 w-7 text-white" />
-      </Button>
+      <>
+        <Button
+          size="icon"
+          className="h-auto flex-1 rounded-xl bg-red-600/70 shadow-md hover:bg-red-600"
+          onClick={onStart}
+        >
+          <Mic className="h-7 w-7 text-white" />
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          className="h-auto flex-1 rounded-xl border-2 shadow-sm"
+          onClick={onUploadFile}
+          title="Upload audio file"
+        >
+          <FileAudio className="h-5 w-5" />
+        </Button>
+      </>
     );
   }
 }
@@ -313,7 +330,18 @@ function SaveRecordingDialog({
   );
 }
 
-// DraftItem Component
+// Create a proper interface for DraftItem props
+interface DraftItemProps {
+  draft: DraftRecording;
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+  onAddToMeeting: () => void;
+  onDelete: () => void;
+  formatTime: (seconds: number) => string;
+  isUploading?: boolean;
+}
+
+// Updated DraftItem component
 function DraftItem({
   draft,
   isPlaying,
@@ -321,14 +349,8 @@ function DraftItem({
   onAddToMeeting,
   onDelete,
   formatTime,
-}: {
-  draft: DraftRecording;
-  isPlaying: boolean;
-  onTogglePlay: () => void;
-  onAddToMeeting: () => void;
-  onDelete: () => void;
-  formatTime: (seconds: number) => string;
-}) {
+  isUploading = false,
+}: DraftItemProps) {
   return (
     <div className="hover:bg-accent/50 group flex flex-col rounded-md border p-3 transition-colors">
       <div className="flex items-center gap-3">
@@ -344,6 +366,11 @@ function DraftItem({
         <div className="overflow-hidden">
           <p className="truncate font-medium" title={draft.name}>
             {draft.name}
+            {isUploading && (
+              <span className="ml-2 inline-flex items-center text-amber-500">
+                <span className="animate-pulse">Uploading...</span>
+              </span>
+            )}
           </p>
           <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="outline" className="px-1 py-0 text-xs font-normal">
@@ -360,15 +387,25 @@ function DraftItem({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="outline" size="sm" onClick={onAddToMeeting}>
-          <ListPlus className="mr-1 h-4 w-4" />
-          <span>Add to Meeting</span>
+        <Button variant="outline" size="sm" onClick={onAddToMeeting} disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              <span>Processing</span>
+            </>
+          ) : (
+            <>
+              <ListPlus className="mr-1 h-4 w-4" />
+              <span>Add to Meeting</span>
+            </>
+          )}
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="text-muted-foreground hover:text-destructive"
           onClick={onDelete}
+          disabled={isUploading}
         >
           <Trash2 className="mr-1 h-4 w-4" />
           <span>Delete</span>
@@ -379,6 +416,182 @@ function DraftItem({
 }
 
 type NewMeeting = Omit<Meeting, 'createdAt'>;
+
+// Helper function to segment audio blob
+const segmentAudioBlob = async (
+  blob: Blob,
+  segmentDurationMinutes: number = 10
+): Promise<{
+  segments: Blob[];
+  durations: number[];
+}> => {
+  return new Promise((resolve, reject) => {
+    // Create an audio context
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Read the blob as an array buffer
+    const fileReader = new FileReader();
+
+    fileReader.onload = async (event) => {
+      try {
+        if (!event.target?.result) {
+          throw new Error('Failed to read audio file');
+        }
+
+        const audioBuffer = await audioContext.decodeAudioData(event.target.result as ArrayBuffer);
+
+        const sampleRate = audioBuffer.sampleRate;
+        const channels = audioBuffer.numberOfChannels;
+        const segmentLengthSamples = segmentDurationMinutes * 60 * sampleRate;
+        const totalSamples = audioBuffer.length;
+        const numSegments = Math.ceil(totalSamples / segmentLengthSamples);
+
+        console.log(`Segmenting audio: ${totalSamples} samples into ${numSegments} segments`);
+
+        const segments: Blob[] = [];
+        const durations: number[] = [];
+
+        for (let i = 0; i < numSegments; i++) {
+          // Calculate start and end positions for this segment
+          const startSample = i * segmentLengthSamples;
+          const endSample = Math.min((i + 1) * segmentLengthSamples, totalSamples);
+          const segmentLength = endSample - startSample;
+
+          console.log(
+            `Creating segment ${i + 1}/${numSegments}: ${startSample}-${endSample} (${segmentLength} samples)`
+          );
+
+          // Create a new buffer for this segment
+          const segmentBuffer = audioContext.createBuffer(channels, segmentLength, sampleRate);
+
+          // Copy the data from the original buffer to the segment buffer
+          for (let channel = 0; channel < channels; channel++) {
+            const originalData = audioBuffer.getChannelData(channel);
+            const segmentData = segmentBuffer.getChannelData(channel);
+
+            for (let j = 0; j < segmentLength; j++) {
+              segmentData[j] = originalData[startSample + j];
+            }
+          }
+
+          // Calculate segment duration
+          const segmentDuration = segmentLength / sampleRate;
+          durations.push(segmentDuration);
+          console.log(`Segment ${i + 1} duration: ${segmentDuration}s`);
+
+          // Use OfflineAudioContext to render the audio
+          const offlineCtx = new OfflineAudioContext(channels, segmentLength, sampleRate);
+          const source = offlineCtx.createBufferSource();
+          source.buffer = segmentBuffer;
+          source.connect(offlineCtx.destination);
+          source.start();
+
+          try {
+            const renderedBuffer = await offlineCtx.startRendering();
+
+            // Convert buffer to wave
+            const wavBlob = await audioBufferToWave(renderedBuffer, blob.type || 'audio/mp3');
+            segments.push(wavBlob);
+            console.log(`Segment ${i + 1} created successfully`);
+          } catch (renderError) {
+            console.error(`Error rendering segment ${i + 1}:`, renderError);
+            throw new Error(`Failed to render audio segment ${i + 1}`);
+          }
+        }
+
+        console.log(`Segmentation complete: ${segments.length} segments created`);
+        resolve({ segments, durations });
+      } catch (error) {
+        console.error('Error segmenting audio:', error);
+        reject(error);
+      }
+    };
+
+    fileReader.onerror = (error) => {
+      console.error('Error reading audio file:', error);
+      reject(new Error('Failed to read audio file'));
+    };
+
+    fileReader.readAsArrayBuffer(blob);
+  });
+};
+
+// Helper function to convert AudioBuffer to WAV blob
+const audioBufferToWave = (buffer: AudioBuffer, mimeType: string): Promise<Blob> => {
+  return new Promise((resolve) => {
+    const numOfChannels = buffer.numberOfChannels;
+    const length = buffer.length * numOfChannels * 2;
+    const sampleRate = buffer.sampleRate;
+
+    // Create a WAV file header
+    const header = new ArrayBuffer(44);
+    const view = new DataView(header);
+
+    // RIFF identifier
+    writeString(view, 0, 'RIFF');
+    // File length
+    view.setUint32(4, 36 + length, true);
+    // RIFF type
+    writeString(view, 8, 'WAVE');
+    // Format chunk identifier
+    writeString(view, 12, 'fmt ');
+    // Format chunk length
+    view.setUint32(16, 16, true);
+    // Sample format (raw)
+    view.setUint16(20, 1, true);
+    // Channel count
+    view.setUint16(22, numOfChannels, true);
+    // Sample rate
+    view.setUint32(24, sampleRate, true);
+    // Byte rate (sample rate * block align)
+    view.setUint32(28, sampleRate * numOfChannels * 2, true);
+    // Block align (channel count * bytes per sample)
+    view.setUint16(32, numOfChannels * 2, true);
+    // Bits per sample
+    view.setUint16(34, 16, true);
+    // Data chunk identifier
+    writeString(view, 36, 'data');
+    // Data chunk length
+    view.setUint32(40, length, true);
+
+    // Create the audio data
+    const audioData = new Float32Array(buffer.length * numOfChannels);
+    let offset = 0;
+
+    for (let channel = 0; channel < numOfChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      for (let i = 0; i < buffer.length; i++) {
+        audioData[offset++] = channelData[i];
+      }
+    }
+
+    // Convert to 16-bit PCM
+    const pcmData = new Int16Array(audioData.length);
+    for (let i = 0; i < audioData.length; i++) {
+      // Scale and convert to 16-bit
+      const s = Math.max(-1, Math.min(1, audioData[i]));
+      pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+
+    // Create the final blob by combining the header and data
+    const blob = new Blob([header, pcmData.buffer], { type: mimeType });
+    resolve(blob);
+  });
+};
+
+// Helper function for writing strings to a DataView
+const writeString = (view: DataView, offset: number, string: string) => {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+};
+
+// Format seconds to MM:SS
+const formatDurationToMMSS = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
 
 // Main component
 export function RecordingControls({
@@ -419,6 +632,7 @@ export function RecordingControls({
   const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
   const [showDraftDeleteConfirmDialog, setShowDraftDeleteConfirmDialog] = useState(false);
   const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
+  const [uploadingDrafts, setUploadingDrafts] = useState<Record<string, boolean>>({});
 
   const { draftRecordings, addDraftRecording, deleteDraftRecording } = useDraftRecordings();
 
@@ -429,6 +643,7 @@ export function RecordingControls({
   const audioAnalyserRef = useRef<AnalyserNode | null>(null);
   const audioDataRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use React Query to load meetings
   const { data: fetchedMeetings = [], isLoading: isFetchingMeetings } = useWorkspaceMeetings(
@@ -634,8 +849,8 @@ export function RecordingControls({
         }
 
         // Add to draft recordings automatically with duration in seconds
+        // Pass only the parameters that the function accepts
         if (addDraftRecording) {
-          // Store both formatted duration and raw seconds
           addDraftRecording(audioBlob, recordingTime, formatTime(recordingTime));
           toast.success('Recording saved as draft');
         }
@@ -714,6 +929,13 @@ export function RecordingControls({
     }
 
     setShowSavingDialog(false);
+
+    // Find the last draft that was just created from the recording
+    const lastDraft = draftRecordings[draftRecordings.length - 1];
+    if (lastDraft) {
+      // Mark it as uploading
+      setUploadingDrafts((prev) => ({ ...prev, [lastDraft.id]: true }));
+    }
 
     try {
       setIsUploading(true);
@@ -814,6 +1036,15 @@ export function RecordingControls({
       }
       setUploadError(errorMessage);
       setIsUploading(false);
+
+      // Clear uploading state on error
+      if (lastDraft) {
+        setUploadingDrafts((prev) => {
+          const updated = { ...prev };
+          delete updated[lastDraft.id];
+          return updated;
+        });
+      }
     }
   };
 
@@ -838,45 +1069,139 @@ export function RecordingControls({
 
     try {
       setIsAddingToMeeting(false);
-      toast.loading('Adding recording to meeting...');
 
-      // Generate a filename
-      const filename = `recording-${Date.now()}.mp3`;
+      // Mark this draft as uploading
+      setUploadingDrafts((prev) => ({ ...prev, [selectedDraft.id]: true }));
 
-      // Get a signed upload URL
-      const urlRes = await getRecordingUploadUrl({
-        meetingId: selectedMeetingId,
-        fileName: filename,
-        contentType: selectedDraft.blob.type,
-      });
+      toast.loading('Processing recording...');
 
-      if (!urlRes.data) {
-        throw new Error('Failed to get upload URL');
+      // Check if the recording is large (> 10 minutes)
+      const MAX_DURATION_MINUTES = 10;
+      const isLargeRecording = selectedDraft.duration > MAX_DURATION_MINUTES * 60;
+
+      if (isLargeRecording) {
+        try {
+          // Segment the recording
+          toast.dismiss();
+          toast.loading('Segmenting large recording... This may take a few moments.');
+
+          const { segments, durations } = await segmentAudioBlob(
+            selectedDraft.blob,
+            MAX_DURATION_MINUTES
+          );
+
+          toast.dismiss();
+          toast.loading(`Uploading ${segments.length} segments...`);
+
+          // Upload each segment
+          const segmentUploads = await Promise.all(
+            segments.map(async (segmentBlob, index) => {
+              // Generate a filename with segment index
+              const filename = `recording-segment-${index + 1}-${Date.now()}.mp3`;
+
+              // Get a signed upload URL for this segment
+              const urlRes = await getRecordingUploadUrl({
+                meetingId: selectedMeetingId,
+                fileName: filename,
+                contentType: selectedDraft.blob.type,
+              });
+
+              if (!urlRes.data) {
+                throw new Error(`Failed to get upload URL for segment ${index + 1}`);
+              }
+
+              const uploadUrl = urlRes.data.uploadUrl;
+              const fileKey = urlRes.data.fileKey;
+
+              // Upload the segment
+              await fetch(uploadUrl, {
+                method: 'PUT',
+                body: segmentBlob,
+                headers: {
+                  'Content-Type': selectedDraft.blob.type,
+                },
+              });
+
+              // Return segment info
+              const segmentDuration = durations[index];
+              const formattedDuration = formatDurationToMMSS(segmentDuration);
+
+              return {
+                fileKey,
+                segmentName: `${draftRecordingName} (Part ${index + 1})`,
+                duration: formattedDuration,
+                durationSeconds: Math.round(segmentDuration),
+                segmentIndex: index,
+              };
+            })
+          );
+
+          // Add the segmented recording to the meeting
+          router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
+
+          const totalDurationSeconds = Math.round(durations.reduce((sum, d) => sum + d, 0));
+          const formattedTotalDuration = formatDurationToMMSS(totalDurationSeconds);
+
+          await addSegmentedMeetingRecording({
+            meetingId: selectedMeetingId,
+            segments: segmentUploads,
+            groupName: draftRecordingName,
+            totalDuration: totalDurationSeconds,
+            formattedTotalDuration: formattedTotalDuration,
+            addCurrentUserAsParticipant: true,
+          });
+
+          // Success handling
+          toast.dismiss();
+          toast.success(`Added ${segments.length} recording segments to meeting`);
+        } catch (error) {
+          console.error('Error processing large recording:', error);
+          toast.dismiss();
+          toast.error('Failed to process large recording');
+          return; // Exit early on error
+        }
+      } else {
+        // Standard single-file upload for smaller recordings
+        const filename = `recording-${Date.now()}.mp3`;
+
+        // Get a signed upload URL
+        const urlRes = await getRecordingUploadUrl({
+          meetingId: selectedMeetingId,
+          fileName: filename,
+          contentType: selectedDraft.blob.type,
+        });
+
+        if (!urlRes.data) {
+          throw new Error('Failed to get upload URL');
+        }
+
+        const uploadUrl = urlRes.data.uploadUrl;
+        const fileKey = urlRes.data.fileKey;
+
+        router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
+
+        // Upload the file
+        await fetch(uploadUrl, {
+          method: 'PUT',
+          body: selectedDraft.blob,
+          headers: {
+            'Content-Type': selectedDraft.blob.type,
+          },
+        });
+
+        // Add the recording to the meeting
+        await addMeetingRecording({
+          meetingId: selectedMeetingId,
+          fileKey,
+          recordingName: draftRecordingName,
+          duration: selectedDraft.formattedDuration || formatTime(selectedDraft.duration),
+          durationSeconds: selectedDraft.duration.toString(),
+          addCurrentUserAsParticipant: true,
+        });
+
+        toast.dismiss();
+        toast.success('Recording added to meeting');
       }
-
-      const uploadUrl = urlRes.data.uploadUrl;
-      const fileKey = urlRes.data.fileKey;
-
-      router.prefetch(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
-
-      // Upload the file
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        body: selectedDraft.blob,
-        headers: {
-          'Content-Type': selectedDraft.blob.type,
-        },
-      });
-
-      // Add the recording to the meeting
-      await addMeetingRecording({
-        meetingId: selectedMeetingId,
-        fileKey,
-        recordingName: draftRecordingName,
-        duration: selectedDraft.formattedDuration || formatTime(selectedDraft.duration),
-        durationSeconds: selectedDraft.duration.toString(),
-        addCurrentUserAsParticipant: true, // Add flag to ensure current user is added as participant
-      });
 
       // Invalidate the recordings query to refresh the list
       queryClient.invalidateQueries({
@@ -890,16 +1215,19 @@ export function RecordingControls({
       setRecordingToDelete(selectedDraft.id);
       setShowDeleteConfirmDialog(true);
 
-      toast.dismiss();
-      toast.success('Recording added to meeting');
-
       // Navigate to the meeting
       router.push(`/workspace/${workspaceId}/meeting/${selectedMeetingId}`);
-      // router.refresh();
     } catch (error) {
       console.error('Failed to add recording to meeting:', error);
       toast.dismiss();
       toast.error('Failed to add recording to meeting');
+
+      // Clear loading state on error
+      setUploadingDrafts((prev) => {
+        const updated = { ...prev };
+        delete updated[selectedDraft.id];
+        return updated;
+      });
     }
   };
 
@@ -947,8 +1275,114 @@ export function RecordingControls({
     setExistingMeetings((prev) => [formattedMeeting, ...prev]);
   };
 
+  // Handle file upload from user's computer
+  const handleFileUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const processAudioFile = async (file: File) => {
+    // Verify file is an audio file
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Please select an audio file');
+      return;
+    }
+
+    try {
+      toast.loading('Processing audio file...');
+
+      // Generate a default name from the filename
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove file extension
+      const defaultName = fileName || `Uploaded Audio ${new Date().toLocaleTimeString()}`;
+
+      // Set the recording name first so it's used when adding to drafts
+      setRecordingName(defaultName);
+      setDraftRecordingName(defaultName);
+
+      let durationSeconds = 0;
+
+      try {
+        // Create an audio context to decode the file and get accurate duration
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+        // Read the file as an ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Decode the audio data
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        // Get the duration in seconds (rounded to nearest integer)
+        durationSeconds = Math.round(audioBuffer.duration);
+      } catch (audioErr) {
+        console.error('Error decoding audio data:', audioErr);
+
+        // Fallback method if decodeAudioData fails
+        const audio = new Audio();
+        const fileUrl = URL.createObjectURL(file);
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            audio.onloadedmetadata = () => resolve();
+            audio.onerror = reject;
+            audio.src = fileUrl;
+          });
+
+          durationSeconds = Math.round(audio.duration) || 0;
+        } catch (err) {
+          console.error('Error loading audio metadata:', err);
+          durationSeconds = 0; // Default to 0 if all methods fail
+        } finally {
+          URL.revokeObjectURL(fileUrl);
+        }
+      }
+
+      // Ensure we have a valid duration
+      if (isNaN(durationSeconds) || !isFinite(durationSeconds)) {
+        durationSeconds = 0;
+      }
+
+      // Add to draft recordings first
+      addDraftRecording(file, durationSeconds, formatTime(durationSeconds));
+
+      toast.dismiss();
+      toast.success('Audio file added to drafts');
+
+      // Switch to drafts tab to show the newly added file
+      setActiveTab('drafts');
+
+      // Call the callback for draft addition
+      onDraftAdded?.();
+    } catch (error) {
+      console.error('Error processing audio file:', error);
+      toast.dismiss();
+      toast.error('Failed to process audio file');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processAudioFile(file);
+    }
+
+    // Reset the input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
+      {/* Hidden file input for audio upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="audio/*"
+        className="hidden"
+      />
+
       {/* Save Recording Dialog */}
       <SaveRecordingDialog
         open={showSavingDialog}
@@ -1168,7 +1602,7 @@ export function RecordingControls({
             )}
 
             {/* Controls */}
-            <div className="flex h-20 gap-4">
+            <div className="flex h-20 gap-2">
               {isRecording && (
                 <Button
                   size="icon"
@@ -1186,6 +1620,7 @@ export function RecordingControls({
                 onStart={startRecording}
                 onPause={pauseRecording}
                 onResume={resumeRecording}
+                onUploadFile={handleFileUpload}
               />
 
               {isRecording && (
@@ -1273,6 +1708,7 @@ export function RecordingControls({
                             }}
                             onDelete={() => handleDraftDelete(draft.id)}
                             formatTime={formatTime}
+                            isUploading={uploadingDrafts[draft.id] || false}
                           />
 
                           {playing === draft.id && (
