@@ -49,13 +49,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const MobileDropdownTrigger = memo(({ children }: { children: React.ReactNode }) => (
-  <DropdownMenuTrigger asChild className="sm:hidden">
-    <Button variant="ghost" size="icon" className="h-8 w-8">
-      {children}
-    </Button>
-  </DropdownMenuTrigger>
-));
+const MobileDropdownTrigger = memo(function MobileDropdownTriggerComponent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <DropdownMenuTrigger asChild className="sm:hidden">
+      <Button variant="ghost" size="icon" className="h-8 w-8">
+        {children}
+      </Button>
+    </DropdownMenuTrigger>
+  );
+});
+
+MobileDropdownTrigger.displayName = 'MobileDropdownTrigger';
 
 interface Recording {
   id: string;
