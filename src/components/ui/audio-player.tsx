@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 const audioManager = {
   activeElement: null as HTMLAudioElement | null,
   isInitialized: false,
+  activeSource: '',
+  activePlayerCallback: null as ((isPlaying: boolean) => void) | null,
   initialize() {
     if (this.isInitialized) return;
 
@@ -33,11 +35,22 @@ const audioManager = {
     }
     return this.activeElement;
   },
+  setActivePlayer(source: string, callback: (isPlaying: boolean) => void) {
+    // Notify previous player that it's no longer active if source is different
+    if (this.activeSource !== source && this.activePlayerCallback) {
+      this.activePlayerCallback(false);
+    }
+
+    this.activeSource = source;
+    this.activePlayerCallback = callback;
+  },
   cleanup() {
     if (this.activeElement) {
       this.activeElement.pause();
       this.activeElement.src = '';
     }
+    this.activeSource = '';
+    this.activePlayerCallback = null;
   },
 };
 
@@ -79,6 +92,26 @@ export function AudioPlayer({
   const listenerInitializedRef = useRef(false);
   const animationRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isUpdatingSourceRef = useRef(false);
+
+  // Modified: Store onPlayPause in a ref to avoid dependency cycles
+  const onPlayPauseRef = useRef(onPlayPause);
+
+  // Update the ref when onPlayPause changes
+  useEffect(() => {
+    onPlayPauseRef.current = onPlayPause;
+  }, [onPlayPause]);
+
+  // Fix initial registration - remove dependency on src to break cycle
+  useEffect(() => {
+    // This effect only needs to run once for registration
+    return () => {
+      if (audioManager.activeSource === src) {
+        audioManager.activeSource = '';
+        audioManager.activePlayerCallback = null;
+      }
+    };
+  }, []); // Empty dependency array - only run on mount/unmount
 
   // Setup audio element and listeners
   useEffect(() => {
@@ -96,30 +129,44 @@ export function AudioPlayer({
       const newCleanup = setupAudioListeners(audio);
       listenerInitializedRef.current = true;
 
-      // Set initial source
-      updateAudioSource(src);
+      // Set initial source if needed (but don't trigger infinite updates)
+      if (isPlaying && !isUpdatingSourceRef.current) {
+        updateAudioSource(src);
+      }
 
       return () => {
         console.log(`🎵 Cleaning up listeners for ${componentIdRef.current}`);
         newCleanup();
-        if (isPlaying) {
+        if (isPlaying && audioManager.activeSource === src) {
           audio.pause();
         }
       };
     }
   }, []);
 
-  // Update source when it changes
+  // Update source when it changes - but be careful not to cause a loop
   useEffect(() => {
-    updateAudioSource(src);
-  }, [src]);
+    // Only update the source if we're playing this source or it's changed
+    if ((isPlaying && audioManager.activeSource !== src) || sourceChangedRef.current) {
+      updateAudioSource(src);
+    }
+  }, [src, isPlaying]);
 
-  // Handle play/pause
+  // Handle play/pause without creating a loop
   useEffect(() => {
     const audio = audioManager.getAudioElement();
     if (!audio) return;
 
     if (isPlaying) {
+      // Register this player as the active one
+      audioManager.setActivePlayer(src, (isActive) => {
+        // This callback will be called when another player becomes active
+        if (!isActive && isPlaying) {
+          // Update our state without triggering another useEffect cycle
+          onPlayPauseRef.current();
+        }
+      });
+
       // Make sure no other audio is playing by accessing manager
       if (sourceChangedRef.current) {
         waitForCanPlay(audio);
@@ -131,9 +178,15 @@ export function AudioPlayer({
       startSliderUpdates();
     } else {
       // Only pause if this component was controlling playback
-      if (audio.src && audio.src.includes(src)) {
+      if (audio.src && audio.src.includes(src) && audioManager.activeSource === src) {
         audio.pause();
         stopSliderUpdates();
+
+        // Clear active player if it's us
+        if (audioManager.activeSource === src) {
+          audioManager.activeSource = '';
+          audioManager.activePlayerCallback = null;
+        }
       }
     }
   }, [isPlaying, src]);
@@ -150,11 +203,11 @@ export function AudioPlayer({
   // Set initial time when it changes
   useEffect(() => {
     const audio = audioManager.getAudioElement();
-    if (audio && initialTime > 0 && isPlaying) {
+    if (audio && initialTime > 0 && isPlaying && audio.src && audio.src.includes(src)) {
       audio.currentTime = initialTime;
       setCurrentTime(initialTime);
     }
-  }, [initialTime, isPlaying]);
+  }, [initialTime, isPlaying, src]);
 
   // Update duration when totalDurationSeconds changes
   useEffect(() => {
@@ -162,6 +215,96 @@ export function AudioPlayer({
       setDuration(totalDurationSeconds);
     }
   }, [totalDurationSeconds]);
+
+  // Enhanced cleanup effect that runs when the component unmounts or when dependencies change
+  useEffect(() => {
+    return () => {
+      console.log(`🎵 Component ${componentIdRef.current} unmounting, cleaning up...`);
+
+      // If this player is active when unmounting, clean up properly
+      if (audioManager.activeSource === src) {
+        const audio = audioManager.getAudioElement();
+        if (audio) {
+          audio.pause();
+
+          // Call onPlayPause via ref to update the parent component's state
+          onPlayPauseRef.current();
+        }
+
+        // Reset the audio manager state
+        audioManager.activeSource = '';
+        audioManager.activePlayerCallback = null;
+      }
+
+      // Make sure to stop any ongoing animations
+      stopSliderUpdates();
+    };
+  }, [src]);
+
+  // Modified play/pause effect to ensure clean tab switching
+  useEffect(() => {
+    const audio = audioManager.getAudioElement();
+    if (!audio) return;
+
+    if (isPlaying) {
+      // Register this player as the active one
+      audioManager.setActivePlayer(src, (isActive) => {
+        // This callback will be called when another player becomes active
+        if (!isActive && isPlaying) {
+          // Update our state without triggering another useEffect cycle
+          onPlayPauseRef.current();
+        }
+      });
+
+      // Make sure no other audio is playing by accessing manager
+      if (sourceChangedRef.current) {
+        waitForCanPlay(audio);
+      } else {
+        playAudio(audio);
+      }
+
+      // Start animation frame for smoother slider updates
+      startSliderUpdates();
+
+      // Make sure we're registered as the active component
+      audioManager.activeSource = src;
+    } else {
+      // Only pause if this component was controlling playback
+      if (audio.src && audio.src.includes(src) && audioManager.activeSource === src) {
+        audio.pause();
+        stopSliderUpdates();
+
+        // Clear active player if it's us
+        audioManager.activeSource = '';
+        audioManager.activePlayerCallback = null;
+      }
+    }
+
+    // Enhanced cleanup for this effect
+    return () => {
+      // If switching tabs while playing, make sure to clean up properly
+      if (isPlaying && audioManager.activeSource === src) {
+        console.log(`🎵 Effect cleanup: ${componentIdRef.current} was playing`);
+        stopSliderUpdates();
+      }
+    };
+  }, [isPlaying, src]);
+
+  // Add a specific effect to detect tab changes by watching parent visibility
+  useEffect(() => {
+    const visibilityChangeHandler = () => {
+      if (document.hidden && isPlaying && audioManager.activeSource === src) {
+        console.log('Tab hidden, pausing audio');
+        onPlayPauseRef.current();
+      }
+    };
+
+    document.addEventListener('visibilitychange', visibilityChangeHandler);
+
+    return () => {
+      document.removeEventListener('visibilitychange', visibilityChangeHandler);
+    };
+  }, [isPlaying, src]);
 
   // Helper function to play audio with waiting for canplay
   function waitForCanPlay(audio: HTMLAudioElement) {
@@ -187,37 +330,43 @@ export function AudioPlayer({
   // Helper function to play audio with error handling
   function playAudio(audio: HTMLAudioElement) {
     try {
-      // Make sure we're playing the right source
+      // Make sure we're playing the right source and not already playing
       if (!audio.src.includes(src)) {
         console.log('Source mismatch, updating source before playing');
         updateAudioSource(src);
         return; // This will trigger the canplay handler
       }
 
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.error('Error playing audio:', error);
-          if (error.name === 'NotAllowedError') {
-            onPlayPause();
-            toast.error('Please click play to start audio');
-          }
-        });
+      // Only play if paused or playback hasn't started yet
+      if (audio.paused) {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.error('Error playing audio:', error);
+            if (error.name === 'NotAllowedError') {
+              onPlayPauseRef.current();
+              toast.error('Please click play to start audio');
+            }
+          });
+        }
       }
     } catch (error) {
       console.error('Play error:', error);
-      onPlayPause();
+      onPlayPauseRef.current();
     }
   }
 
   // Helper function to update audio source
   function updateAudioSource(newSrc: string) {
     const audio = audioManager.getAudioElement();
-    if (!audio) return;
+    if (!audio || isUpdatingSourceRef.current) return;
 
     // Check if source actually needs to change
     if (!audio.src || !audio.src.includes(newSrc)) {
       console.log(`🎵 Updating source to: ${newSrc}`);
+
+      // Set flag to prevent recursive updates
+      isUpdatingSourceRef.current = true;
       sourceChangedRef.current = true;
 
       // Stop any current playback
@@ -230,6 +379,11 @@ export function AudioPlayer({
       // Set new source and load
       audio.src = newSrc;
       audio.load();
+
+      // Reset flag after a small delay to ensure all updates are processed
+      setTimeout(() => {
+        isUpdatingSourceRef.current = false;
+      }, 100);
     }
   }
 
@@ -263,7 +417,7 @@ export function AudioPlayer({
       if (audio.src.includes(src)) {
         setCurrentTime(0);
         if (onTimeUpdate) onTimeUpdate(0);
-        onPlayPause();
+        onPlayPauseRef.current();
       }
     };
 

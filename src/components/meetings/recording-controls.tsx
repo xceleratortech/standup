@@ -1602,7 +1602,7 @@ export function RecordingControls({
             )}
 
             {/* Controls */}
-            <div className="flex h-20 gap-4">
+            <div className="flex h-20 gap-2">
               {isRecording && (
                 <Button
                   size="icon"

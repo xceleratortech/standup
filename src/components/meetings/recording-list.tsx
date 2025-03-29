@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -49,6 +49,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+const MobileDropdownTrigger = memo(({ children }: { children: React.ReactNode }) => (
+  <DropdownMenuTrigger asChild className="sm:hidden">
+    <Button variant="ghost" size="icon" className="h-8 w-8">
+      {children}
+    </Button>
+  </DropdownMenuTrigger>
+));
+
 interface Recording {
   id: string;
   meetingId: string;
@@ -96,23 +104,33 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
     return dateCompare;
   });
 
-  // For debugging purposes only - remove if not needed
-  // const recordingGroups = sortedRecordings.reduce(
-  //   (groups, recording) => {
-  //     if (recording.groupId) {
-  //       if (!groups[recording.groupId]) {
-  //         groups[recording.groupId] = [];
-  //       }
-  //       groups[recording.groupId].push(recording);
-  //     }
-  //     return groups;
-  //   },
-  //   {} as Record<string, Recording[]>
-  // );
+  // Group recordings by groupId
+  const recordingGroups = sortedRecordings.reduce(
+    (groups, recording) => {
+      if (recording.groupId) {
+        if (!groups[recording.groupId]) {
+          groups[recording.groupId] = [];
+        }
+        groups[recording.groupId].push(recording);
+      }
+      return groups;
+    },
+    {} as Record<string, Recording[]>
+  );
 
   const [playing, setPlaying] = useState<string | null>(null);
   const [recordingURLs, setRecordingURLs] = useState<Record<string, string>>({});
   const [expandedRecordings, setExpandedRecordings] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    // Create a map of all group IDs set to true (collapsed) by default
+    const initialState: Record<string, boolean> = {};
+    recordings.forEach((recording) => {
+      if (recording.groupId) {
+        initialState[recording.groupId] = true;
+      }
+    });
+    return initialState;
+  });
   const [activeTab, setActiveTab] = useState<Record<string, string>>({});
   const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -132,96 +150,120 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
     generateTranscriptions(false);
   }, [queryClient, meetingId, generateTranscriptions, recordings.length]);
 
-  // Handler for audio time updates
-  const handleTimeUpdate = (recordingId: string, currentTime: number) => {
+  // Update collapsedGroups when recordings change
+  useEffect(() => {
+    // Initialize any new groups as collapsed by default
+    setCollapsedGroups((prev) => {
+      const newState = { ...prev };
+      recordings.forEach((recording) => {
+        if (recording.groupId && newState[recording.groupId] === undefined) {
+          newState[recording.groupId] = true;
+        }
+      });
+      return newState;
+    });
+  }, [recordings]);
+
+  // Memoize callback functions to prevent infinite update loops
+  const handleTimeUpdate = useCallback((recordingId: string, currentTime: number) => {
     setCurrentPlaybackTimes((prev) => ({
       ...prev,
       [recordingId]: currentTime,
     }));
-  };
+  }, []);
 
   // Toggle play/pause for a recording
-  const togglePlay = async (e: React.MouseEvent, recordingId: string) => {
-    // Stop event from expanding/collapsing the recording
-    e.stopPropagation();
+  const togglePlay = useCallback(
+    async (e: React.MouseEvent, recordingId: string) => {
+      // Stop event from expanding/collapsing the recording
+      e.stopPropagation();
 
-    try {
-      if (playing === recordingId) {
-        // Pause current recording
-        setPlaying(null);
-      } else {
-        // If we don't have the URL yet, fetch it
-        if (!recordingURLs[recordingId]) {
-          const downloadUrl = await getDownloadUrl(recordingId);
+      try {
+        if (playing === recordingId) {
+          // Pause current recording
+          setPlaying(null);
+        } else {
+          // If we don't have the URL yet, fetch it
+          if (!recordingURLs[recordingId]) {
+            const downloadUrl = await getDownloadUrl(recordingId);
 
+            setRecordingURLs((prev) => ({
+              ...prev,
+              [recordingId]: downloadUrl,
+            }));
+          }
+
+          // Expand the recording if it's not already expanded
+          if (!expandedRecordings[recordingId]) {
+            setExpandedRecordings((prev) => ({
+              ...prev,
+              [recordingId]: true,
+            }));
+
+            // Set default active tab
+            setActiveTab((prev) => ({
+              ...prev,
+              [recordingId]: 'audio',
+            }));
+          }
+
+          // Play the recording
+          setPlaying(recordingId);
+        }
+      } catch (error) {
+        console.error('Error toggling play state:', error);
+        toast.error('Failed to play recording');
+      }
+    },
+    [playing, recordingURLs, expandedRecordings, getDownloadUrl]
+  );
+
+  // Handle download
+  const handleDownload = useCallback(
+    async (e: React.MouseEvent, recordingId: string) => {
+      // Prevent the event from bubbling up
+      e.preventDefault();
+      e.stopPropagation();
+
+      try {
+        // Use the cached URL if available
+        let downloadUrl = recordingURLs[recordingId];
+
+        if (!downloadUrl) {
+          downloadUrl = await getDownloadUrl(recordingId);
+
+          // Cache the URL
           setRecordingURLs((prev) => ({
             ...prev,
             [recordingId]: downloadUrl,
           }));
         }
 
-        // Expand the recording if it's not already expanded
-        if (!expandedRecordings[recordingId]) {
-          setExpandedRecordings((prev) => ({
-            ...prev,
-            [recordingId]: true,
-          }));
+        const recording = recordings.find((r) => r.id === recordingId);
 
-          // Set default active tab
-          setActiveTab((prev) => ({
-            ...prev,
-            [recordingId]: 'audio',
-          }));
+        if (recording) {
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `${recording.recordingName || 'recording'}.mp3`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         }
-
-        // Play the recording
-        setPlaying(recordingId);
+      } catch (error) {
+        console.error('Error downloading recording:', error);
+        toast.error('Failed to download recording');
       }
-    } catch (error) {
-      console.error('Error toggling play state:', error);
-      toast.error('Failed to play recording');
-    }
-  };
-
-  // Handle download
-  const handleDownload = async (e: React.MouseEvent, recordingId: string) => {
-    e.stopPropagation();
-
-    try {
-      // Use the cached URL if available
-      let downloadUrl = recordingURLs[recordingId];
-
-      if (!downloadUrl) {
-        downloadUrl = await getDownloadUrl(recordingId);
-
-        // Cache the URL
-        setRecordingURLs((prev) => ({
-          ...prev,
-          [recordingId]: downloadUrl,
-        }));
-      }
-
-      const recording = recordings.find((r) => r.id === recordingId);
-
-      if (recording) {
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `${recording.recordingName || 'recording'}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch (error) {
-      console.error('Error downloading recording:', error);
-      toast.error('Failed to download recording');
-    }
-  };
+    },
+    [recordingURLs, recordings, getDownloadUrl]
+  );
 
   // Confirm deletion
-  const confirmDelete = (e: React.MouseEvent, recordingId: string) => {
+  const confirmDelete = useCallback((e: React.MouseEvent, recordingId: string) => {
+    // Prevent event bubbling
+    e.preventDefault();
     e.stopPropagation();
     setRecordingToDelete(recordingId);
-  };
+  }, []);
 
   // Handle delete
   const handleDelete = async () => {
@@ -302,96 +344,102 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   };
 
   // Toggle recording expansion state
-  const toggleExpand = async (recordingId: string) => {
-    try {
-      const isCurrentlyExpanded = expandedRecordings[recordingId];
+  const toggleExpand = useCallback(
+    async (recordingId: string) => {
+      try {
+        const isCurrentlyExpanded = expandedRecordings[recordingId];
 
-      // If expanding and we don't have the URL yet, fetch it
-      if (!isCurrentlyExpanded && !recordingURLs[recordingId]) {
-        // Set loading state for this recording
-        setLoadingRecordings((prev) => ({
-          ...prev,
-          [recordingId]: true,
-        }));
+        // If expanding and we don't have the URL yet, fetch it
+        if (!isCurrentlyExpanded && !recordingURLs[recordingId]) {
+          // Set loading state for this recording
+          setLoadingRecordings((prev) => ({
+            ...prev,
+            [recordingId]: true,
+          }));
 
-        const downloadUrl = await getDownloadUrl(recordingId);
-        setRecordingURLs((prev) => ({
-          ...prev,
-          [recordingId]: downloadUrl,
-        }));
-
-        // Clear loading state
-        setLoadingRecordings((prev) => ({
-          ...prev,
-          [recordingId]: false,
-        }));
-      }
-
-      // Toggle expanded state
-      setExpandedRecordings((prev) => ({
-        ...prev,
-        [recordingId]: !prev[recordingId],
-      }));
-
-      // Set default active tab for newly expanded recordings
-      const recording = recordings.find((r) => r.id === recordingId);
-      if (!isCurrentlyExpanded && recording?.transcription && !activeTab[recordingId]) {
-        setActiveTab((prev) => ({
-          ...prev,
-          [recordingId]: 'audio', // Default to audio tab
-        }));
-      }
-    } catch (error) {
-      // Clear loading state in case of error
-      setLoadingRecordings((prev) => ({
-        ...prev,
-        [recordingId]: false,
-      }));
-
-      console.error('Error fetching recording URL:', error);
-      toast.error('Failed to load recording');
-    }
-  };
-
-  // Play from a specific segment in transcript
-  const handlePlaySegment = (recordingId: string, timeInSeconds: number) => {
-    // If we don't have the URL yet, fetch it first
-    if (!recordingURLs[recordingId]) {
-      toast.loading('Loading audio...');
-
-      getDownloadUrl(recordingId)
-        .then((downloadUrl) => {
-          toast.dismiss();
+          const downloadUrl = await getDownloadUrl(recordingId);
           setRecordingURLs((prev) => ({
             ...prev,
             [recordingId]: downloadUrl,
           }));
 
-          // Make sure the recording is expanded and set to transcript tab
-          setExpandedRecordings((prev) => ({
+          // Clear loading state
+          setLoadingRecordings((prev) => ({
             ...prev,
-            [recordingId]: true,
+            [recordingId]: false,
           }));
+        }
 
+        // Toggle expanded state
+        setExpandedRecordings((prev) => ({
+          ...prev,
+          [recordingId]: !prev[recordingId],
+        }));
+
+        // Set default active tab for newly expanded recordings
+        const recording = recordings.find((r) => r.id === recordingId);
+        if (!isCurrentlyExpanded && recording?.transcription && !activeTab[recordingId]) {
           setActiveTab((prev) => ({
             ...prev,
-            [recordingId]: 'transcript',
+            [recordingId]: 'audio', // Default to audio tab
           }));
+        }
+      } catch (error) {
+        // Clear loading state in case of error
+        setLoadingRecordings((prev) => ({
+          ...prev,
+          [recordingId]: false,
+        }));
 
-          setTimeout(() => {
-            startPlayback(recordingId, timeInSeconds);
-          }, 300);
-        })
-        .catch((error) => {
-          toast.dismiss();
-          console.error('Error loading recording URL:', error);
-          toast.error('Failed to load recording');
-        });
-    } else {
-      // URL already loaded, just play
-      startPlayback(recordingId, timeInSeconds);
-    }
-  };
+        console.error('Error fetching recording URL:', error);
+        toast.error('Failed to load recording');
+      }
+    },
+    [expandedRecordings, recordingURLs, getDownloadUrl, recordings, activeTab]
+  );
+
+  // Play from a specific segment in transcript
+  const handlePlaySegment = useCallback(
+    (recordingId: string, timeInSeconds: number) => {
+      // If we don't have the URL yet, fetch it first
+      if (!recordingURLs[recordingId]) {
+        toast.loading('Loading audio...');
+
+        getDownloadUrl(recordingId)
+          .then((downloadUrl) => {
+            toast.dismiss();
+            setRecordingURLs((prev) => ({
+              ...prev,
+              [recordingId]: downloadUrl,
+            }));
+
+            // Make sure the recording is expanded and set to transcript tab
+            setExpandedRecordings((prev) => ({
+              ...prev,
+              [recordingId]: true,
+            }));
+
+            setActiveTab((prev) => ({
+              ...prev,
+              [recordingId]: 'transcript',
+            }));
+
+            setTimeout(() => {
+              startPlayback(recordingId, timeInSeconds);
+            }, 300);
+          })
+          .catch((error) => {
+            toast.dismiss();
+            console.error('Error loading recording URL:', error);
+            toast.error('Failed to load recording');
+          });
+      } else {
+        // URL already loaded, just play
+        startPlayback(recordingId, timeInSeconds);
+      }
+    },
+    [recordingURLs, getDownloadUrl]
+  );
 
   function startPlayback(recordingId: string, timeInSeconds: number) {
     // Set time first
@@ -416,41 +464,46 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
   }
 
   // Handle regenerating transcription for a single recording
-  const handleRegenerateTranscription = (e: React.MouseEvent, recordingId: string) => {
-    e.stopPropagation();
+  const handleRegenerateTranscription = useCallback(
+    (e: React.MouseEvent, recordingId: string) => {
+      // Prevent event bubbling
+      e.preventDefault();
+      e.stopPropagation();
 
-    // Set loading state for this recording
-    setRegeneratingIds((prev) => ({
-      ...prev,
-      [recordingId]: true,
-    }));
+      // Set loading state for this recording
+      setRegeneratingIds((prev) => ({
+        ...prev,
+        [recordingId]: true,
+      }));
 
-    // Call the mutation
-    regenerateTranscription(recordingId, {
-      onSuccess: () => {
-        setRegeneratingIds((prev) => ({
-          ...prev,
-          [recordingId]: false,
-        }));
+      // Call the mutation
+      regenerateTranscription(recordingId, {
+        onSuccess: () => {
+          setRegeneratingIds((prev) => ({
+            ...prev,
+            [recordingId]: false,
+          }));
 
-        // Make sure this recording is expanded and showing the transcript tab
-        setExpandedRecordings((prev) => ({
-          ...prev,
-          [recordingId]: true,
-        }));
-        setActiveTab((prev) => ({
-          ...prev,
-          [recordingId]: 'transcript',
-        }));
-      },
-      onError: () => {
-        setRegeneratingIds((prev) => ({
-          ...prev,
-          [recordingId]: false,
-        }));
-      },
-    });
-  };
+          // Make sure this recording is expanded and showing the transcript tab
+          setExpandedRecordings((prev) => ({
+            ...prev,
+            [recordingId]: true,
+          }));
+          setActiveTab((prev) => ({
+            ...prev,
+            [recordingId]: 'transcript',
+          }));
+        },
+        onError: () => {
+          setRegeneratingIds((prev) => ({
+            ...prev,
+            [recordingId]: false,
+          }));
+        },
+      });
+    },
+    [regenerateTranscription]
+  );
 
   // Handle regenerating all transcriptions
   const handleRegenerateAllTranscriptions = () => {
@@ -520,6 +573,39 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
         ) : null}
       </>
     );
+  };
+
+  // Toggle group collapsed state
+  const toggleGroupCollapse = useCallback((groupId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  }, []);
+
+  // Get total duration of all recordings in a group
+  const getGroupTotalDuration = (groupId: string): string => {
+    const groupRecordings = recordings.filter((r) => r.groupId === groupId);
+    let totalSeconds = 0;
+
+    groupRecordings.forEach((recording) => {
+      const durationSecs = getDurationInSeconds(recording.duration, recording.durationSeconds);
+      if (durationSecs) {
+        totalSeconds += durationSecs;
+      }
+    });
+
+    if (totalSeconds > 0) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    return 'Unknown';
   };
 
   return (
@@ -604,19 +690,35 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                 recording.totalSegments !== null &&
                 recording.segmentIndex === recording.totalSegments - 1;
 
+              // Skip if this recording is part of a collapsed group and not the first recording
+              if (
+                isGrouped &&
+                !isFirstInGroup &&
+                recording.groupId &&
+                collapsedGroups[recording.groupId]
+              ) {
+                return null;
+              }
+
               return (
                 <div
                   key={recording.id}
                   className={cn('flex flex-col', isGrouped && 'relative pl-4')}
                 >
-                  {/* Group indicator line */}
+                  {/* Group indicator line - Fix the overflow issue */}
                   {isGrouped && (
                     <div
-                      className="bg-muted-foreground/20 absolute top-0 left-0 h-full w-0.5"
-                      style={{
-                        top: isFirstInGroup ? '50%' : 0,
-                        bottom: isLastInGroup ? '50%' : 0,
-                      }}
+                      className={cn('absolute top-0 left-0 h-full w-0.5', 'bg-muted-foreground/20')}
+                      style={
+                        {
+                          // top: isFirstInGroup ? '50%' : 0,
+                          // bottom: isLastInGroup ? '50%' : 0,
+                          // height:
+                          //   isFirstInGroup && collapsedGroups[recording.groupId || '']
+                          //     ? '50%' // When collapsed, only show the line to the halfway point
+                          //     : 'auto', // Otherwise let it extend naturally
+                        }
+                      }
                     />
                   )}
 
@@ -624,159 +726,338 @@ export function RecordingList({ meetingId, canEdit }: RecordingListProps) {
                   {isFirstInGroup &&
                     recording.segmentIndex !== null &&
                     recording.totalSegments !== null && (
-                      <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
-                        <span className="bg-background absolute -left-2 h-4 w-4 rounded-full border" />
-                        <span>
-                          Part {recording.segmentIndex + 1} of {recording.totalSegments}
-                        </span>
-                      </div>
-                    )}
+                      <div className="relative mb-1 flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={cn(
+                            'absolute -left-2 z-10 h-5 w-5 rounded-full p-0',
+                            'bg-background border' // Simplified, no special styling when collapsed
+                          )}
+                          onClick={(e) =>
+                            recording.groupId && toggleGroupCollapse(recording.groupId, e)
+                          }
+                          title={
+                            recording.groupId && collapsedGroups[recording.groupId]
+                              ? 'Expand all parts'
+                              : 'Collapse group'
+                          }
+                        >
+                          {recording.groupId && collapsedGroups[recording.groupId] ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronUp className="h-3 w-3" />
+                          )}
+                        </Button>
 
-                  {/* Existing recording header and content */}
-                  <div
-                    className={cn(
-                      'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors',
-                      expandedRecordings[recording.id] && 'rounded-b-none',
-                      isGrouped && 'border-dashed'
-                    )}
-                    onClick={() => toggleExpand(recording.id)}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">
-                        {recording.recordingName || 'Unnamed Recording'}
-                      </p>
-                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
-                        <span>{formatDuration(recording.duration, recording.durationSeconds)}</span>
-                        <span className="xs:inline hidden">•</span>
-                        <span className="truncate">
-                          {formatDistanceToNow(new Date(recording.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </span>
-                        {recording.transcriptionGeneratedAt && (
-                          <>
-                            <span className="xs:inline hidden">•</span>
-                            <span className="flex items-center gap-1 text-xs">
-                              <RefreshCw className="h-3 w-3" />
-                              <span className="hidden sm:inline">Transcript </span>
-                              {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="ml-2 flex shrink-0 items-center gap-1">
-                      {/* Mobile view menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild className="sm:hidden">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
+                        {recording.groupId && collapsedGroups[recording.groupId] ? (
+                          <div
+                            className="flex cursor-pointer items-center gap-2 pl-5 text-sm hover:underline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDownload(e, recording.id);
+                              recording.groupId && toggleGroupCollapse(recording.groupId);
                             }}
                           >
-                            <Download className="mr-2 h-4 w-4" /> Download
-                          </DropdownMenuItem>
-                          {canEdit && (
-                            <>
+                            <span className="text-foreground font-medium">
+                              Multi-part Recording
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({recording.totalSegments} parts ·{' '}
+                              {getGroupTotalDuration(recording.groupId)} total)
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground pl-5 text-sm">
+                            Part {recording.segmentIndex + 1} of {recording.totalSegments}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  {/* Special UI for collapsed group header */}
+                  {isFirstInGroup && recording.groupId && collapsedGroups[recording.groupId] && (
+                    <div
+                      className="bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors"
+                      onClick={() => toggleExpand(recording.id)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="max-w-[200px] truncate font-medium sm:max-w-[400px]">
+                          {recording.recordingName || 'Unnamed Recording'} (Multi-part)
+                        </p>
+                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
+                          <span>
+                            {recording.totalSegments} parts ·{' '}
+                            {getGroupTotalDuration(recording.groupId)}
+                          </span>
+                          <span className="xs:inline hidden">•</span>
+                          <span className="truncate">
+                            {formatDistanceToNow(new Date(recording.createdAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        </div>
+
+                        {/* Restore button controls from regular recordings */}
+                        <div className="ml-2 flex shrink-0 items-center gap-1">
+                          {/* Mobile view menu */}
+                          <DropdownMenu>
+                            <MobileDropdownTrigger>
+                              <MoreVertical className="h-4 w-4" />
+                            </MobileDropdownTrigger>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleRegenerateTranscription(e, recording.id);
+                                  handleDownload(e, recording.id);
                                 }}
+                              >
+                                <Download className="mr-2 h-4 w-4" /> Download
+                              </DropdownMenuItem>
+                              {canEdit && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRegenerateTranscription(e, recording.id);
+                                    }}
+                                    disabled={regeneratingIds[recording.id]}
+                                  >
+                                    <RefreshCw
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        regeneratingIds[recording.id] && 'animate-spin'
+                                      )}
+                                    />
+                                    Regenerate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmDelete(e, recording.id);
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          {/* Desktop view buttons */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => handleDownload(e, recording.id)}
+                            className="hidden h-8 w-8 sm:flex"
+                            title="Download recording"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+
+                          {canEdit && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleRegenerateTranscription(e, recording.id)}
+                                className="hidden h-8 w-8 sm:flex"
                                 disabled={regeneratingIds[recording.id]}
+                                title="Regenerate transcript"
                               >
                                 <RefreshCw
                                   className={cn(
-                                    'mr-2 h-4 w-4',
+                                    'h-4 w-4',
                                     regeneratingIds[recording.id] && 'animate-spin'
                                   )}
                                 />
-                                Regenerate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  confirmDelete(e, recording.id);
-                                }}
-                                className="text-destructive focus:text-destructive"
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => confirmDelete(e, recording.id)}
+                                className="hidden h-8 w-8 sm:flex"
+                                title="Delete recording"
                               >
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
+                                <Trash2 className="text-destructive h-4 w-4" />
+                              </Button>
                             </>
                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      {/* Desktop view buttons */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => handleDownload(e, recording.id)}
-                        className="hidden h-8 w-8 sm:flex"
-                        title="Download recording"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-
-                      {canEdit && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => handleRegenerateTranscription(e, recording.id)}
-                            className="hidden h-8 w-8 sm:flex"
-                            disabled={regeneratingIds[recording.id]}
-                            title="Regenerate transcript"
-                          >
-                            <RefreshCw
-                              className={cn(
-                                'h-4 w-4',
-                                regeneratingIds[recording.id] && 'animate-spin'
-                              )}
-                            />
-                          </Button>
 
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            onClick={(e) => confirmDelete(e, recording.id)}
-                            className="hidden h-8 w-8 sm:flex"
-                            title="Delete recording"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(recording.id);
+                            }}
+                            className="h-8 w-8"
+                            disabled={loadingRecordings[recording.id]}
                           >
-                            <Trash2 className="text-destructive h-4 w-4" />
+                            {loadingRecordings[recording.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : expandedRecordings[recording.id] ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
                           </Button>
-                        </>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(recording.id);
-                        }}
-                        className="h-8 w-8"
-                        disabled={loadingRecordings[recording.id]}
-                      >
-                        {loadingRecordings[recording.id] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : expandedRecordings[recording.id] ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Regular recording UI (only shown for non-first segments or when group not collapsed) */}
+                  {(!isFirstInGroup ||
+                    !recording.groupId ||
+                    !collapsedGroups[recording.groupId]) && (
+                    <div
+                      className={cn(
+                        'bg-card hover:bg-accent/50 flex cursor-pointer items-center justify-between rounded-md border p-2 transition-colors',
+                        expandedRecordings[recording.id] && 'rounded-b-none',
+                        isGrouped && 'border-dashed'
+                      )}
+                      onClick={() => toggleExpand(recording.id)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="max-w-[200px] truncate font-medium sm:max-w-[400px]">
+                          {recording.recordingName || 'Unnamed Recording'}
+                        </p>
+                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs sm:text-sm">
+                          <span>
+                            {formatDuration(recording.duration, recording.durationSeconds)}
+                          </span>
+                          <span className="xs:inline hidden">•</span>
+                          <span className="truncate">
+                            {formatDistanceToNow(new Date(recording.createdAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                          {recording.transcriptionGeneratedAt && (
+                            <>
+                              <span className="xs:inline hidden">•</span>
+                              <span className="flex items-center gap-1 text-xs">
+                                <RefreshCw className="h-3 w-3" />
+                                <span className="hidden sm:inline">Transcript </span>
+                                {formatDistanceToNow(new Date(recording.transcriptionGeneratedAt), {
+                                  addSuffix: true,
+                                })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Button controls - Make sure they are visible in expanded state */}
+                      <div className="ml-2 flex shrink-0 items-center gap-1">
+                        {/* Mobile view menu */}
+                        <DropdownMenu>
+                          <MobileDropdownTrigger>
+                            <MoreVertical className="h-4 w-4" />
+                          </MobileDropdownTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(e, recording.id);
+                              }}
+                            >
+                              <Download className="mr-2 h-4 w-4" /> Download
+                            </DropdownMenuItem>
+                            {canEdit && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRegenerateTranscription(e, recording.id);
+                                  }}
+                                  disabled={regeneratingIds[recording.id]}
+                                >
+                                  <RefreshCw
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      regeneratingIds[recording.id] && 'animate-spin'
+                                    )}
+                                  />
+                                  Regenerate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    confirmDelete(e, recording.id);
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Desktop view buttons */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleDownload(e, recording.id)}
+                          className="hidden h-8 w-8 sm:flex"
+                          title="Download recording"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+
+                        {canEdit && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => handleRegenerateTranscription(e, recording.id)}
+                              className="hidden h-8 w-8 sm:flex"
+                              disabled={regeneratingIds[recording.id]}
+                              title="Regenerate transcript"
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  'h-4 w-4',
+                                  regeneratingIds[recording.id] && 'animate-spin'
+                                )}
+                              />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => confirmDelete(e, recording.id)}
+                              className="hidden h-8 w-8 sm:flex"
+                              title="Delete recording"
+                            >
+                              <Trash2 className="text-destructive h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpand(recording.id);
+                          }}
+                          className="h-8 w-8"
+                          disabled={loadingRecordings[recording.id]}
+                        >
+                          {loadingRecordings[recording.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : expandedRecordings[recording.id] ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Animated content section */}
                   <AnimatePresence>
